@@ -1,24 +1,18 @@
-// swift-tools-version: 6.1
-// The swift-tools-version declares the minimum version of Swift required to build this package.
-
+// swift-tools-version: 5.10
 import PackageDescription
 
 let package = Package(
     name: "DungeonGrid",
+    platforms: [.macOS(.v12), .iOS(.v15), .tvOS(.v15), .watchOS(.v8)],
     products: [
-        // Products define the executables and libraries a package produces, making them visible to other packages.
-        .library(
-            name: "DungeonGrid",
-            targets: ["DungeonGrid"]),
+        .library(name: "DungeonGrid", targets: ["DungeonGrid"])
     ],
+    dependencies: [ ],
     targets: [
-        // Targets are the basic building blocks of a package, defining a module or a test suite.
-        // Targets can depend on other targets in this package and products from dependencies.
-        .target(
-            name: "DungeonGrid"),
+        .target(name: "DungeonGrid"),
         .testTarget(
             name: "DungeonGridTests",
             dependencies: ["DungeonGrid"]
-        ),
+        )
     ]
 )
