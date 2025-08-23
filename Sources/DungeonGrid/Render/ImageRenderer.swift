@@ -46,15 +46,18 @@ public enum ImageRenderer {
         public var graph: RegionGraph? = nil
         public var themes: ThemeAssignment? = nil
         public var placements: [Placement] = []
+        public var paths: [[Point]] = []   // ✅ NEW
 
         public init() {}
 
         public init(graph: RegionGraph? = nil,
                     themes: ThemeAssignment? = nil,
-                    placements: [Placement] = []) {
+                    placements: [Placement] = [],
+                    paths: [[Point]] = []) {   // ✅ NEW
             self.graph = graph
             self.themes = themes
             self.placements = placements
+            self.paths = paths
         }
     }
 
@@ -168,6 +171,14 @@ public enum ImageRenderer {
         }
         if let tpt = d.exit {
             drawDot(&px, width, height, tpt.x * s + s/2, tpt.y * s + s/2, max(1, s/3), exitC)
+        }
+        
+        // Paths overlay (magenta-like dots)
+        let pathC = RGBA(250, 80, 200)
+        for path in overlays.paths {
+            for p in path {
+                drawDot(&px, width, height, p.x * s + s/2, p.y * s + s/2, max(1, s/4), pathC)
+            }
         }
 
         // Placements
