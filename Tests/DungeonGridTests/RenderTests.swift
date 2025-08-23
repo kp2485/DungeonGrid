@@ -94,7 +94,7 @@ import Testing
 
         // ➕ Compute path for overlay
         guard let s = d.entrance, let t = d.exit else {
-            #expect(false, "Expected entrance/exit to be present")
+            #expect(Bool(false), "Expected entrance/exit to be present")
             return
         }
         let path = Pathfinder.shortestPath(in: d, from: s, to: t, movement: .init())
