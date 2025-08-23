@@ -225,27 +225,46 @@ public enum EdgeDoors {
 // MARK: - Edge-aware BFS (used for entrance/exit tagging)
 
 fileprivate func edgeBFS(from start: Point, grid: Grid, edges: EdgeGrid) -> [Int] {
-    let w = grid.width, h = grid.height, total = w*h
+    let w = grid.width, h = grid.height, total = w * h
+    @inline(__always) func idx(_ x: Int, _ y: Int) -> Int { y * w + x }
+
     var dist = Array(repeating: -1, count: total)
-    guard grid[start.x, start.y].isPassable else { return dist }
-    var q = [start.y*w + start.x]; dist[q[0]] = 0
 
-    while !q.isEmpty {
-        let cur = q.removeFirst()
-        let x = cur % w, y = cur / w, base = dist[cur]
+    // Validate start
+    guard start.x >= 0, start.x < w, start.y >= 0, start.y < h,
+          grid[start.x, start.y].isPassable else {
+        return dist
+    }
 
-        // 4-neighbors with edge check
-        if x > 0, grid[x-1, y].isPassable, edges.canStep(from: x, y, to: x-1, y) {
-            let ni = y*w + (x-1); if dist[ni] < 0 { dist[ni] = base + 1; q.append(ni) }
+    let startIndex = idx(start.x, start.y)
+    var q: [Int] = [startIndex]
+    var head = 0
+    dist[startIndex] = 0
+
+    while head < q.count {
+        let cur = q[head]; head += 1
+        let x = cur % w, y = cur / w
+        let base = dist[cur]
+
+        // left
+        if x > 0, grid[x - 1, y].isPassable, edges.canStep(from: x, y, to: x - 1, y) {
+            let ni = idx(x - 1, y)
+            if dist[ni] < 0 { dist[ni] = base + 1; q.append(ni) }
         }
-        if x + 1 < w, grid[x+1, y].isPassable, edges.canStep(from: x, y, to: x+1, y) {
-            let ni = y*w + (x+1); if dist[ni] < 0 { dist[ni] = base + 1; q.append(ni) }
+        // right
+        if x + 1 < w, grid[x + 1, y].isPassable, edges.canStep(from: x, y, to: x + 1, y) {
+            let ni = idx(x + 1, y)
+            if dist[ni] < 0 { dist[ni] = base + 1; q.append(ni) }
         }
-        if y > 0, grid[x, y-1].isPassable, edges.canStep(from: x, y, to: x, y-1) {
-            let ni = (y-1)*w + x; if dist[ni] < 0 { dist[ni] = base + 1; q.append(ni) }
+        // up
+        if y > 0, grid[x, y - 1].isPassable, edges.canStep(from: x, y, to: x, y - 1) {
+            let ni = idx(x, y - 1)
+            if dist[ni] < 0 { dist[ni] = base + 1; q.append(ni) }
         }
-        if y + 1 < h, grid[x, y+1].isPassable, edges.canStep(from: x, y, to: x, y+1) {
-            let ni = (y+1)*w + x; if dist[ni] < 0 { dist[ni] = base + 1; q.append(ni) }
+        // down
+        if y + 1 < h, grid[x, y + 1].isPassable, edges.canStep(from: x, y, to: x, y + 1) {
+            let ni = idx(x, y + 1)
+            if dist[ni] < 0 { dist[ni] = base + 1; q.append(ni) }
         }
     }
     return dist
