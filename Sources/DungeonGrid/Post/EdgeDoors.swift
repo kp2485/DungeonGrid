@@ -137,9 +137,27 @@ public enum EdgeDoors {
         }
 
         // 5) Rasterize door tiles for compatibility (mark the correct side(s))
-        var grid = d.grid
-        var doorTiles: [Point] = []
+        //    Replace manual loops with a centralized helper so edges remain the source of truth.
+        let dWithDoorTiles = DoorRasterizer.rasterizeDoorTiles(
+            dungeon: Dungeon(
+                grid: d.grid,
+                rooms: d.rooms,
+                seed: d.seed,
+                doors: [],
+                entrance: d.entrance,
+                exit: d.exit,
+                edges: edges
+            )
+        )
+        var grid = dWithDoorTiles.grid
 
+        // Recompute doorTiles by scanning the grid (tiles are derived from door edges)
+        var doorTiles: [Point] = []
+        for y in 0..<h {
+            for x in 0..<w {
+                if grid[x, y] == .door { doorTiles.append(Point(x, y)) }
+            }
+        }
         // Vertical door edges at (vx: x, vy: y) separate (x-1,y) ↔ (x,y)
         for y in 0..<h {
             for x in 1..<w where edges[vx: x, vy: y] == .door {
