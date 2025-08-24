@@ -264,24 +264,8 @@ fileprivate func edgeBFS(from start: Point, grid: Grid, edges: EdgeGrid) -> [Int
         let x = cur % w, y = cur / w
         let base = dist[cur]
 
-        // left
-        if x > 0, grid[x - 1, y].isPassable, edges.canStep(from: x, y, to: x - 1, y) {
-            let ni = idx(x - 1, y)
-            if dist[ni] < 0 { dist[ni] = base + 1; q.append(ni) }
-        }
-        // right
-        if x + 1 < w, grid[x + 1, y].isPassable, edges.canStep(from: x, y, to: x + 1, y) {
-            let ni = idx(x + 1, y)
-            if dist[ni] < 0 { dist[ni] = base + 1; q.append(ni) }
-        }
-        // up
-        if y > 0, grid[x, y - 1].isPassable, edges.canStep(from: x, y, to: x, y - 1) {
-            let ni = idx(x, y - 1)
-            if dist[ni] < 0 { dist[ni] = base + 1; q.append(ni) }
-        }
-        // down
-        if y + 1 < h, grid[x, y + 1].isPassable, edges.canStep(from: x, y, to: x, y + 1) {
-            let ni = idx(x, y + 1)
+        forEachNeighbor(x, y, w, h, grid, edges) { nx, ny in
+            let ni = idx(nx, ny)
             if dist[ni] < 0 { dist[ni] = base + 1; q.append(ni) }
         }
     }

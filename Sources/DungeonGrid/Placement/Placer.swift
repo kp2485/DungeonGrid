@@ -5,7 +5,6 @@
 //  Created by Kyle Peterson on 8/23/25.
 //
 
-
 import Foundation
 
 public enum Placer {
@@ -125,28 +124,19 @@ public enum Placer {
     private static func edgeBFS(from start: Point, grid: Grid, edges: EdgeGrid) -> [Int] {
         let w = grid.width, h = grid.height, total = w*h
         var dist = Array(repeating: -1, count: total)
-        guard grid[start.x, start.y].isPassable else { return dist }
+        guard start.x >= 0 && start.x < w && start.y >= 0 && start.y < h && grid[start.x, start.y].isPassable else {
+            return dist
+        }
         var q = [start.y*w + start.x]; dist[q[0]] = 0
 
         while !q.isEmpty {
             let cur = q.removeFirst()
             let x = cur % w, y = cur / w, base = dist[cur]
 
-            // left
-            if x > 0, grid[x-1, y].isPassable, edges.canStep(from: x, y, to: x-1, y) {
-                let ni = y*w + (x-1); if dist[ni] < 0 { dist[ni] = base + 1; q.append(ni) }
-            }
-            // right
-            if x + 1 < w, grid[x+1, y].isPassable, edges.canStep(from: x, y, to: x+1, y) {
-                let ni = y*w + (x+1); if dist[ni] < 0 { dist[ni] = base + 1; q.append(ni) }
-            }
-            // up
-            if y > 0, grid[x, y-1].isPassable, edges.canStep(from: x, y, to: x, y-1) {
-                let ni = (y-1)*w + x; if dist[ni] < 0 { dist[ni] = base + 1; q.append(ni) }
-            }
-            // down
-            if y + 1 < h, grid[x, y+1].isPassable, edges.canStep(from: x, y, to: x, y+1) {
-                let ni = (y+1)*w + x; if dist[ni] < 0 { dist[ni] = base + 1; q.append(ni) }
+            // unified, edge-aware neighbors
+            forEachNeighbor(x, y, w, h, grid, edges) { nx, ny in
+                let ni = ny*w + nx
+                if dist[ni] < 0 { dist[ni] = base + 1; q.append(ni) }
             }
         }
         return dist
