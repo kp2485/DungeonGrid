@@ -2,6 +2,8 @@
 //  LocksPPMRenderer.swift
 //  DungeonGrid
 //
+//  Created by Kyle Peterson on 8/25/25.
+//
 //  Minimal PPM renderer that overlays locked edges on top of a simple grid.
 //  Keeps it independent from ImageRenderer so you can use it in tests, tools, or debug code.
 //

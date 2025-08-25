@@ -1,3 +1,11 @@
+//
+//  LocksPPMRendererTests.swift
+//  DungeonGrid
+//
+//  Created by Kyle Peterson on 8/25/25.
+//
+
+
 import Testing
 @testable import DungeonGrid
 
@@ -19,8 +27,5 @@ import Testing
 
         let ppm = LocksPPMRenderer.render(d2)
         #expect(!ppm.isEmpty)
-
-        // Optionally, save to disk during local dev:
-        // try? ppm.write(to: URL(fileURLWithPath: "/tmp/locked.ppm"))
     }
 }
