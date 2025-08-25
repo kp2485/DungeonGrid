@@ -87,7 +87,7 @@ public enum DungeonJSON {
                             rooms: rooms, entrance: entrance, exit: exit, doorTiles: doorTiles)
 
         let enc = JSONEncoder()
-        enc.outputFormatting = [.withoutEscapingSlashes]
+        enc.outputFormatting = [.sortedKeys]
         return try enc.encode(snap)
     }
 
