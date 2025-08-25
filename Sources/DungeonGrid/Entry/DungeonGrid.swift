@@ -86,19 +86,22 @@ public enum DungeonGrid {
         var pipe = DungeonPipeline(base: base)
         
         if (ensureConnected ?? config.ensureConnected) {
-            pipe = pipe.ensureConnected(seed: seed)
+            pipe = pipe.ensureConnected(seed: SeedDeriver.derive(seed, "ensureConnected"))
         }
         if (placeDoorsAndTags ?? config.placeDoorsAndTags) {
-            pipe = pipe.placeDoors(seed: seed, policy: doorPolicy)
+            pipe = pipe.placeDoors(seed: SeedDeriver.derive(seed, "placeDoorsAndTag"),
+                                   policy: doorPolicy)
         }
         if let l = locks {
             pipe = pipe.planLocks(maxLocks: l.maxLocks, doorBias: l.doorBias)
         }
         if let t = themes {
-            pipe = pipe.theme(seed: seed &+ t.seedOffset, rules: t.rules)
+            // combine a named derivation with caller’s offset for theming independence
+            let sTheme = SeedDeriver.derive(seed, "theme") &+ t.seedOffset
+            pipe = pipe.theme(seed: sTheme, rules: t.rules)
         }
         if !requests.isEmpty {
-            pipe = pipe.placeAll(requests)
+            pipe = pipe.placeAll(requests) // each request carries its own seed
         }
         
         // 3) Run and return
