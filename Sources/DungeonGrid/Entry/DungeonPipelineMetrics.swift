@@ -7,8 +7,6 @@
 //  Aggregated timing + counts for a DungeonPipeline run.
 //
 
-import Foundation
-
 public struct DungeonPipelineMetrics: Sendable {
     public struct Step: Sendable {
         public let name: String

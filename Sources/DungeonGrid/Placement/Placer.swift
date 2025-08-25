@@ -5,8 +5,6 @@
 //  Created by Kyle Peterson on 8/23/25.
 //
 
-import Foundation
-
 public enum Placer {
 
     /// Back-compat convenience that avoids recomputing labels/graph.

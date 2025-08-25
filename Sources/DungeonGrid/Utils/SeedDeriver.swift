@@ -8,8 +8,6 @@
 //  Avoids magic constants while keeping runs fully reproducible.
 //
 
-import Foundation
-
 public enum SeedDeriver {
     /// 64-bit FNV-1a over UTF-8 bytes (simple, stable)
     @inline(__always)

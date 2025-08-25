@@ -5,8 +5,6 @@
 //  Created by Kyle Peterson on 8/23/25.
 //
 
-import Foundation
-
 public enum Pathfinder {
     /// A* shortest path on the edge graph. Returns inclusive path of Points, or nil if unreachable.
     /// Uses Manhattan heuristic (admissible on 4-neighborhood).
