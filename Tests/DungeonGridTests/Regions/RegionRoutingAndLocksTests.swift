@@ -10,49 +10,53 @@ import Testing
 
 @Suite struct RegionRoutingAndLocksTests {
 
-    @Test("Graph routing finds a path between entrance and exit")
+    @Test("Graph routing finds a path between entrance and exit (across seeds)")
     func regionRouteExists() {
-        let d = DungeonGrid.generate(
-            config: .init(width: 61, height: 39,
-                          algorithm: .bsp(BSPOptions()),
-                          ensureConnected: true,
-                          placeDoorsAndTags: true),
-            seed: 7
-        )
+        for worldSeed in TestEnv.fuzzSeeds {
+            let d = DungeonGrid.generate(
+                config: .init(width: 61, height: 39,
+                              algorithm: .bsp(BSPOptions()),
+                              ensureConnected: true,
+                              placeDoorsAndTags: true),
+                seed: worldSeed
+            )
 
-        let index = DungeonIndex(d)
-        let g = index.graph
+            let index = DungeonIndex(d)
+            let g = index.graph
 
-        guard let a = d.entrance, let b = d.exit else {
-            #expect(expectOrDump(false,
-                                 "Expected entrance/exit to exist",
+            guard let a = d.entrance, let b = d.exit else {
+                #expect(expectOrDump(false,
+                                     "Expected entrance/exit to exist (seed \(worldSeed))",
+                                     dungeon: d))
+                continue
+            }
+            guard
+                let rs = Regions.regionID(at: a, labels: index.labels, width: index.width),
+                let rt = Regions.regionID(at: b, labels: index.labels, width: index.width)
+            else {
+                #expect(expectOrDump(false,
+                                     "Entrance/exit not in labeled regions (seed \(worldSeed))",
+                                     dungeon: d))
+                continue
+            }
+
+            let route = RegionRouting.route(g, from: rs, to: rt, doorBias: 0)
+            #expect(expectOrDump(route != nil,
+                                 "Expected region route between entrance and exit (seed \(worldSeed))",
                                  dungeon: d))
-            return
         }
-        guard
-            let rs = Regions.regionID(at: a, labels: index.labels, width: index.width),
-            let rt = Regions.regionID(at: b, labels: index.labels, width: index.width)
-        else {
-            #expect(expectOrDump(false,
-                                 "Entrance/exit not in labeled regions",
-                                 dungeon: d))
-            return
-        }
-
-        let route = RegionRouting.route(g, from: rs, to: rt, doorBias: 0)
-        #expect(expectOrDump(route != nil,
-                             "Expected region route between entrance and exit",
-                             dungeon: d))
     }
 
     @Test("Locks plan produces locked edges when locks exist")
     func locksPlanProducesLockedEdges() {
+        // Lightly param by first fuzz seed to keep runtime bounded.
+        guard let worldSeed = TestEnv.fuzzSeeds.first else { return }
         let d = DungeonGrid.generate(
             config: .init(width: 61, height: 39,
                           algorithm: .uniformRooms(UniformRoomsOptions()),
                           ensureConnected: true,
                           placeDoorsAndTags: true),
-            seed: 9
+            seed: worldSeed
         )
 
         let g = DungeonIndex(d).graph

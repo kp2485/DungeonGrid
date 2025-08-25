@@ -12,9 +12,9 @@ import Testing
 
     @Test("Entrance/Exit tagging exists and is sane (when enabled)")
     func entranceExitTagging() {
-        // Two rooms with a narrow seam -> EdgeDoors should insert a door and tag S/E.
-        let R1 = Rect(x: 2, y: 2, width: 10, height: 7)    // x:2...11, y:2...8
-        let R2 = Rect(x: 12, y: 6, width: 4,  height: 1)   // x:12...15, y:6...6
+        // Synthetic: two rooms with a seam should produce a door and tag S/E.
+        let R1 = Rect(x: 2, y: 2, width: 10, height: 7)
+        let R2 = Rect(x: 12, y: 6, width: 4,  height: 1)
 
         var g = Grid(width: 24, height: 12, fill: .wall)
         for y in R1.minY...R1.maxY { for x in R1.minX...R1.maxX { g[x,y] = .floor } }
@@ -46,59 +46,57 @@ import Testing
         }
     }
 
-    @Test("Edges-as-truth: every door tile touches a door edge and vice versa")
+    @Test("Edges-as-truth: every door tile touches a door edge and vice versa (across seeds)")
     func doorEdgesConsistency() {
-        let cfg = DungeonConfig(width: 41, height: 25,
-                                algorithm: .bsp(BSPOptions()),
-                                ensureConnected: true,
-                                placeDoorsAndTags: true)
-        let d = DungeonGrid.generate(config: cfg, seed: 123)
+        for worldSeed in TestEnv.fuzzSeeds {
+            let cfg = DungeonConfig(width: 41, height: 25,
+                                    algorithm: .bsp(BSPOptions()),
+                                    ensureConnected: true,
+                                    placeDoorsAndTags: true)
+            let d = DungeonGrid.generate(config: cfg, seed: worldSeed)
 
-        // (A) Every door tile must touch at least one .door edge
-        func touchesDoorEdge(_ x: Int, _ y: Int) -> Bool {
-            let w = d.grid.width, h = d.grid.height
-            if x > 0,   d.edges[vx: x,   vy: y] == .door { return true }
-            if x + 1 <= w, d.edges[vx: x+1, vy: y] == .door { return true }
-            if y > 0,   d.edges[hx: x, hy: y] == .door { return true }
-            if y + 1 <= h, d.edges[hx: x, hy: y+1] == .door { return true }
-            return false
-        }
-
-        for p in d.doors {
-            #expect(expectOrDump(touchesDoorEdge(p.x, p.y),
-                                 "Door tile at (\(p.x),\(p.y)) does not touch a .door edge",
-                                 dungeon: d))
-        }
-
-        // (B) Every .door edge must have at least one adjacent .door tile
-        func edgeHasDoorTile(vertical: Bool, a: Int, b: Int) -> Bool {
-            let g = d.grid
-            if vertical {
-                let x = a, y = b
-                if x > 0, g[x-1, y] == .door { return true }
-                if x < g.width, g[x, y] == .door { return true }
-            } else {
-                let x = a, y = b
-                if y > 0, g[x, y-1] == .door { return true }
-                if y < g.height, g[x, y] == .door { return true }
+            func touchesDoorEdge(_ x: Int, _ y: Int) -> Bool {
+                let w = d.grid.width, h = d.grid.height
+                if x > 0,       d.edges[vx: x,   vy: y] == .door { return true }
+                if x + 1 <= w,  d.edges[vx: x+1, vy: y] == .door { return true }
+                if y > 0,       d.edges[hx: x, hy: y] == .door { return true }
+                if y + 1 <= h,  d.edges[hx: x, hy: y+1] == .door { return true }
+                return false
             }
-            return false
-        }
 
-        // Vertical edges: (vx: x, vy: y)
-        for y in 0..<d.grid.height {
-            for x in 1..<d.grid.width where d.edges[vx: x, vy: y] == .door {
-                #expect(expectOrDump(edgeHasDoorTile(vertical: true, a: x, b: y),
-                                     "Vertical door edge (vx:\(x),vy:\(y)) has no adjacent door tile",
+            for p in d.doors {
+                #expect(expectOrDump(touchesDoorEdge(p.x, p.y),
+                                     "Door tile at (\(p.x),\(p.y)) does not touch a .door edge (seed \(worldSeed))",
                                      dungeon: d))
             }
-        }
-        // Horizontal edges: (hx: x, hy: y)
-        for x in 0..<d.grid.width {
-            for y in 1..<d.grid.height where d.edges[hx: x, hy: y] == .door {
-                #expect(expectOrDump(edgeHasDoorTile(vertical: false, a: x, b: y),
-                                     "Horizontal door edge (hx:\(x),hy:\(y)) has no adjacent door tile",
-                                     dungeon: d))
+
+            func edgeHasDoorTile(vertical: Bool, a: Int, b: Int) -> Bool {
+                let g = d.grid
+                if vertical {
+                    let x = a, y = b
+                    if x > 0, g[x-1, y] == .door { return true }
+                    if x < g.width, g[x, y] == .door { return true }
+                } else {
+                    let x = a, y = b
+                    if y > 0, g[x, y-1] == .door { return true }
+                    if y < g.height, g[x, y] == .door { return true }
+                }
+                return false
+            }
+
+            for y in 0..<d.grid.height {
+                for x in 1..<d.grid.width where d.edges[vx: x, vy: y] == .door {
+                    #expect(expectOrDump(edgeHasDoorTile(vertical: true, a: x, b: y),
+                                         "Vertical door edge (vx:\(x),vy:\(y)) has no adjacent door tile (seed \(worldSeed))",
+                                         dungeon: d))
+                }
+            }
+            for x in 0..<d.grid.width {
+                for y in 1..<d.grid.height where d.edges[hx: x, hy: y] == .door {
+                    #expect(expectOrDump(edgeHasDoorTile(vertical: false, a: x, b: y),
+                                         "Horizontal door edge (hx:\(x),hy:\(y)) has no adjacent door tile (seed \(worldSeed))",
+                                         dungeon: d))
+                }
             }
         }
     }

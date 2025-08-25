@@ -10,79 +10,79 @@ import Testing
 
 @Suite struct ThemePlacementIntegrationTests {
 
-    @Test("Theme-name filter + determinism")
+    @Test("Theme-name filter + determinism (first two fuzz seeds)")
     func themeFilterAndDeterminism() {
-        // Generate and theme
-        let d = DungeonGrid.generate(
-            config: .init(width: 61, height: 39,
-                          algorithm: .uniformRooms(UniformRoomsOptions()),
-                          ensureConnected: true, placeDoorsAndTags: true),
-            seed: 1234
-        )
-        let index = DungeonIndex(d)
-        let g = index.graph
-        let s = RegionAnalysis.computeStats(dungeon: d, graph: g)
+        let seeds = Array(TestEnv.fuzzSeeds.prefix(2))
+        for worldSeed in seeds {
+            let d = DungeonGrid.generate(
+                config: .init(width: 61, height: 39,
+                              algorithm: .uniformRooms(UniformRoomsOptions()),
+                              ensureConnected: true, placeDoorsAndTags: true),
+                seed: worldSeed
+            )
+            let index = DungeonIndex(d)
+            let g = index.graph
+            let s = RegionAnalysis.computeStats(dungeon: d, graph: g)
 
-        // Theme rules: mark some far, bigger rooms as 'treasure'; fallbacks for other regions
-        let rules: [ThemeRule] = [
-            ThemeRule(regionClass: .room, minArea: 16, minDistanceFromEntrance: 4,
-                      options: [Theme("treasure")]),
-            ThemeRule(regionClass: .room, options: [Theme("room")]),
-            ThemeRule(regionClass: .corridor, options: [Theme("corridor")]),
-        ]
-        let assignment = Themer.assignThemes(dungeon: d, graph: g, stats: s, seed: 99, rules: rules)
+            let rules: [ThemeRule] = [
+                ThemeRule(regionClass: .room, minArea: 16, minDistanceFromEntrance: 4,
+                          options: [Theme("treasure")]),
+                ThemeRule(regionClass: .room, options: [Theme("room")]),
+                ThemeRule(regionClass: .corridor, options: [Theme("corridor")]),
+            ]
+            let assignment = Themer.assignThemes(dungeon: d, graph: g, stats: s, seed: 99, rules: rules)
 
-        // Plan treasure only in regions themed 'treasure'
-        var pol = PlacementPolicy()
-        pol.count = 10
-        pol.regionClass = .roomsOnly
-        pol.minSpacing = 2
+            var pol = PlacementPolicy()
+            pol.count = 10
+            pol.regionClass = .roomsOnly
+            pol.minSpacing = 2
 
-        let specs = [
-            SpawnSpec(kind: "loot.treasure",
-                      themeNames: ["treasure"],
-                      policy: pol)
-        ]
+            let specs = [
+                SpawnSpec(kind: "loot.treasure",
+                          themeNames: ["treasure"],
+                          policy: pol)
+            ]
 
-        let plan1 = ContentPlanner.planAll(in: d, graph: g, themes: assignment, seed: 777, specs: specs)
-        let plan2 = ContentPlanner.planAll(in: d, graph: g, themes: assignment, seed: 777, specs: specs)
-        #expect(expectOrDump(plan1 == plan2,
-                             "ContentPlanner determinism failed for identical seeds",
-                             dungeon: d,
-                             placements: plan1.placements))
-
-        // Every placement must be in a region themed 'treasure'
-        let (labels, _, w, _) = Regions.labelCells(d)
-        for p in plan1.placements {
-            let rid = labels[p.position.y * w + p.position.x]
-            #expect(expectOrDump(rid != nil,
-                                 "Placement at \(p.position) not labeled",
+            let plan1 = ContentPlanner.planAll(in: d, graph: g, themes: assignment, seed: 777, specs: specs)
+            let plan2 = ContentPlanner.planAll(in: d, graph: g, themes: assignment, seed: 777, specs: specs)
+            #expect(expectOrDump(plan1 == plan2,
+                                 "ContentPlanner determinism failed for worldSeed \(worldSeed)",
                                  dungeon: d,
                                  placements: plan1.placements))
-            let th = rid.flatMap { assignment.regionToTheme[$0] }
-            #expect(expectOrDump(th?.name == "treasure",
-                                 "Non-treasure placement at \(p.position)",
-                                 dungeon: d,
-                                 placements: plan1.placements))
-            #expect(expectOrDump(p.kind == "loot.treasure",
-                                 "Wrong kind at \(p.position): \(p.kind)",
-                                 dungeon: d,
-                                 placements: plan1.placements))
+
+            let (labels, _, w, _) = Regions.labelCells(d)
+            for p in plan1.placements {
+                let rid = labels[p.position.y * w + p.position.x]
+                #expect(expectOrDump(rid != nil,
+                                     "Placement at \(p.position) not labeled (seed \(worldSeed))",
+                                     dungeon: d,
+                                     placements: plan1.placements))
+                let th = rid.flatMap { assignment.regionToTheme[$0] }
+                #expect(expectOrDump(th?.name == "treasure",
+                                     "Non-treasure placement at \(p.position) (seed \(worldSeed))",
+                                     dungeon: d,
+                                     placements: plan1.placements))
+                #expect(expectOrDump(p.kind == "loot.treasure",
+                                     "Wrong kind at \(p.position): \(p.kind) (seed \(worldSeed))",
+                                     dungeon: d,
+                                     placements: plan1.placements))
+            }
         }
     }
 
     @Test("Cross-kind spacing: no overlapping tiles across specs")
     func noOverlapAcrossSpecs() {
+        guard let worldSeed = TestEnv.fuzzSeeds.first else { return }
         let d = DungeonGrid.generate(
             config: .init(width: 61, height: 39,
                           algorithm: .bsp(BSPOptions()),
                           ensureConnected: true, placeDoorsAndTags: true),
-            seed: 202
+            seed: worldSeed
         )
         let index = DungeonIndex(d)
         let g = index.graph
         let s = RegionAnalysis.computeStats(dungeon: d, graph: g)
-        // Simple theming so all regions have a theme
+
         let rules: [ThemeRule] = [
             ThemeRule(regionClass: .room, options: [Theme("room")]),
             ThemeRule(regionClass: .corridor, options: [Theme("corridor")])
@@ -102,7 +102,7 @@ import Testing
                                           themes: themes,
                                           seed: d.seed,
                                           specs: specs)
-        // Ensure no exact-tile overlaps across kinds
+
         var seen = Set<Int>()
         for p in plan.placements {
             let li = p.position.y * d.grid.width + p.position.x
