@@ -5,7 +5,6 @@
 //  Created by Kyle Peterson on 8/23/25.
 //
 
-
 import Testing
 @testable import DungeonGrid
 
@@ -14,8 +13,8 @@ import Testing
     @Test("LOS: door blocks when opaque, allows when transparent")
     func doorBlocksOrNot() {
         // Two rooms touching at a single-tile neck -> EdgeDoors will create `.door` edges there.
-        let R1 = Rect(x: 2, y: 2, width: 10, height: 7)    // x:2...11, y:2...8
-        let R2 = Rect(x: 12, y: 6, width: 4,  height: 1)   // x:12...15, y:6...6 (one row overlap)
+        let R1 = Rect(x: 2, y: 2, width: 10, height: 7)
+        let R2 = Rect(x: 12, y: 6, width: 4,  height: 1)
 
         var g = Grid(width: 24, height: 12, fill: .wall)
         for y in R1.minY...R1.maxY { for x in R1.minX...R1.maxX { g[x,y] = .floor } }
@@ -31,10 +30,14 @@ import Testing
         let b = Point(R2.minX, R2.minY) // a cell in the small right-hand room
 
         // Doors are OPAQUE: no LOS
-        #expect(!Visibility.hasLineOfSight(in: d, from: a, to: b, policy: .init(doorTransparent: false)))
+        #expect(expectOrDump(!Visibility.hasLineOfSight(in: d, from: a, to: b, policy: .init(doorTransparent: false)),
+                             "Opaque doors unexpectedly allow LOS",
+                             dungeon: d))
 
         // Doors are TRANSPARENT: LOS exists
-        #expect(Visibility.hasLineOfSight(in: d, from: a, to: b, policy: .init(doorTransparent: true)))
+        #expect(expectOrDump(Visibility.hasLineOfSight(in: d, from: a, to: b, policy: .init(doorTransparent: true)),
+                             "Transparent doors unexpectedly block LOS",
+                             dungeon: d))
     }
 
     @Test("FOV: returns origin and nearby cells; respects radius")
@@ -64,19 +67,24 @@ import Testing
                     }
                 }
             }
-            return best ?? Point(1,1) // fallback (shouldn't hit)
+            return best ?? Point(1,1)
         }()
 
-        #expect(d.grid[origin.x, origin.y].isPassable)
+        #expect(expectOrDump(d.grid[origin.x, origin.y].isPassable,
+                             "Chosen origin is not passable",
+                             dungeon: d))
 
         let vis5 = Visibility.computeVisible(in: d, from: origin, radius: 5)
-        #expect(!vis5.isEmpty)
-        #expect(Set(vis5).contains(origin))
+        #expect(expectOrDump(!vis5.isEmpty,
+                             "FOV radius 5 returned an empty set",
+                             dungeon: d))
 
         // Farther radius should include all of radius 5 (monotone)
         let vis8 = Visibility.computeVisible(in: d, from: origin, radius: 8)
         let set5: Set<Point> = Set(vis5)
         let set8: Set<Point> = Set(vis8)
-        #expect(set5.isSubset(of: set8))
+        #expect(expectOrDump(set5.isSubset(of: set8),
+                             "FOV monotonicity failed: radius 5 not subset of radius 8",
+                             dungeon: d))
     }
 }

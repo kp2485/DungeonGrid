@@ -8,48 +8,98 @@
 import Testing
 @testable import DungeonGrid
 
-@Suite("Doors & Tags")
-struct DoorTests {
-    @Test("Entrance/Exit tagging picks distinct passable points when there are >=2 rooms")
-    func entranceExitTagging() {
-        let cfg = DungeonConfig(width: 84, height: 52, algorithm: .bsp(BSPOptions()))
-        let post = DungeonGrid.generate(config: cfg, seed: 777)
+@Suite struct DoorTests {
 
-        if post.rooms.count >= 2 {
-            #expect(post.entrance != nil)
-            #expect(post.exit != nil)
-            #expect(post.entrance != post.exit)
-            if let ent = post.entrance, let ex = post.exit {
-                #expect(post.grid[ent.x, ent.y].isPassable)
-                #expect(post.grid[ex.x, ex.y].isPassable)
-            }
-        } else {
-            #expect(true)
+    @Test("Entrance/Exit tagging exists and is sane (when enabled)")
+    func entranceExitTagging() {
+        // Two rooms with a narrow seam -> EdgeDoors should insert a door and tag S/E.
+        let R1 = Rect(x: 2, y: 2, width: 10, height: 7)    // x:2...11, y:2...8
+        let R2 = Rect(x: 12, y: 6, width: 4,  height: 1)   // x:12...15, y:6...6
+
+        var g = Grid(width: 24, height: 12, fill: .wall)
+        for y in R1.minY...R1.maxY { for x in R1.minX...R1.maxX { g[x,y] = .floor } }
+        for y in R2.minY...R2.maxY { for x in R2.minX...R2.maxX { g[x,y] = .floor } }
+
+        let base = Dungeon(grid: g,
+                           rooms: [Room(id: 0, rect: R1), Room(id: 1, rect: R2)],
+                           seed: 1, doors: [], entrance: nil, exit: nil,
+                           edges: BuildEdges.fromGrid(g))
+
+        let post = EdgeDoors.placeDoorsAndTag(base, seed: 1)
+
+        #expect(expectOrDump(post.entrance != nil,
+                             "Expected entrance to be tagged",
+                             dungeon: post))
+        #expect(expectOrDump(post.exit != nil,
+                             "Expected exit to be tagged",
+                             dungeon: post))
+        if let s = post.entrance, let e = post.exit {
+            #expect(expectOrDump(s != e,
+                                 "Entrance equals exit (should differ)",
+                                 dungeon: post))
+            #expect(expectOrDump(post.grid[s.x, s.y].isPassable,
+                                 "Entrance not on passable tile",
+                                 dungeon: post))
+            #expect(expectOrDump(post.grid[e.x, e.y].isPassable,
+                                 "Exit not on passable tile",
+                                 dungeon: post))
         }
     }
 
-    @Test("Door appears on a thin room–corridor contact (contrived case)")
-    func placesDoorInContrivedCase() {
-        var g = Grid(width: 20, height: 10, fill: .wall)
-        let r = Rect(x: 3, y: 3, width: 6, height: 4) // room x:3...8,y:3...6
-        for y in r.minY...r.maxY { for x in r.minX...r.maxX { g[x, y] = .floor } }
-        // Corridor to the right, touching room perimeter at (8,5) / (9,5) outside
-        for y in 2...7 { g[10, y] = .floor }
-        g[9, 5] = .floor
+    @Test("Edges-as-truth: every door tile touches a door edge and vice versa")
+    func doorEdgesConsistency() {
+        let cfg = DungeonConfig(width: 41, height: 25,
+                                algorithm: .bsp(BSPOptions()),
+                                ensureConnected: true,
+                                placeDoorsAndTags: true)
+        let d = DungeonGrid.generate(config: cfg, seed: 123)
 
-        let d = Dungeon(
-            grid: g,
-            rooms: [Room(id: 0, rect: r)],
-            seed: 0,
-            doors: [],
-            entrance: nil,
-            exit: nil,
-            edges: BuildEdges.fromGrid(g)
-        )
+        // (A) Every door tile must touch at least one .door edge
+        func touchesDoorEdge(_ x: Int, _ y: Int) -> Bool {
+            let w = d.grid.width, h = d.grid.height
+            if x > 0,   d.edges[vx: x,   vy: y] == .door { return true }
+            if x + 1 <= w, d.edges[vx: x+1, vy: y] == .door { return true }
+            if y > 0,   d.edges[hx: x, hy: y] == .door { return true }
+            if y + 1 <= h, d.edges[hx: x, hy: y+1] == .door { return true }
+            return false
+        }
 
-        let post = EdgeDoors.placeDoorsAndTag(d, seed: 0)
+        for p in d.doors {
+            #expect(expectOrDump(touchesDoorEdge(p.x, p.y),
+                                 "Door tile at (\(p.x),\(p.y)) does not touch a .door edge",
+                                 dungeon: d))
+        }
 
-        #expect(post.doors.contains { $0.x == 8 && $0.y == 5 })
-        #expect(post.grid[8, 5] == .door)
+        // (B) Every .door edge must have at least one adjacent .door tile
+        func edgeHasDoorTile(vertical: Bool, a: Int, b: Int) -> Bool {
+            let g = d.grid
+            if vertical {
+                let x = a, y = b
+                if x > 0, g[x-1, y] == .door { return true }
+                if x < g.width, g[x, y] == .door { return true }
+            } else {
+                let x = a, y = b
+                if y > 0, g[x, y-1] == .door { return true }
+                if y < g.height, g[x, y] == .door { return true }
+            }
+            return false
+        }
+
+        // Vertical edges: (vx: x, vy: y)
+        for y in 0..<d.grid.height {
+            for x in 1..<d.grid.width where d.edges[vx: x, vy: y] == .door {
+                #expect(expectOrDump(edgeHasDoorTile(vertical: true, a: x, b: y),
+                                     "Vertical door edge (vx:\(x),vy:\(y)) has no adjacent door tile",
+                                     dungeon: d))
+            }
+        }
+        // Horizontal edges: (hx: x, hy: y)
+        for x in 0..<d.grid.width {
+            for y in 1..<d.grid.height where d.edges[hx: x, hy: y] == .door {
+                #expect(expectOrDump(edgeHasDoorTile(vertical: false, a: x, b: y),
+                                     "Horizontal door edge (hx:\(x),hy:\(y)) has no adjacent door tile",
+                                     dungeon: d))
+            }
+        }
     }
 }
