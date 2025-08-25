@@ -116,6 +116,19 @@ public enum Placer {
             return Placement(kind: kind, position: $0, region: rid)
         }
     }
+    
+    /// Batch-plan multiple kinds with a shared DungeonIndex (avoids redundant topology work).
+    public static func planMany(in d: Dungeon,
+                                index: DungeonIndex,
+                                requests: [PlacementRequest]) -> [String: [Placement]] {
+        var out: [String: [Placement]] = [:]
+        out.reserveCapacity(requests.count)
+        for r in requests {
+            let ps = plan(in: d, index: index, seed: r.seed, kind: r.kind, policy: r.policy)
+            if out[r.kind] != nil { out[r.kind]! += ps } else { out[r.kind] = ps }
+        }
+        return out
+    }
 
     // MARK: - Utilities
 

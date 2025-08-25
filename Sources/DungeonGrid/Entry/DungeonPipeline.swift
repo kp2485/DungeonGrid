@@ -93,6 +93,17 @@ public struct DungeonPipeline {
             }
         }
     }
+    
+    /// Batch place multiple kinds in one step (shared DungeonIndex; deterministic).
+    public func placeAll(_ requests: [PlacementRequest]) -> DungeonPipeline {
+        addingNamed("placeAll[\(requests.count)]") { res in
+            let index = DungeonIndex(res.dungeon)
+            let dict = Placer.planMany(in: res.dungeon, index: index, requests: requests)
+            for (k, ps) in dict {
+                if res.placements[k] != nil { res.placements[k]! += ps } else { res.placements[k] = ps }
+            }
+        }
+    }
 
     // MARK: - Run
 
