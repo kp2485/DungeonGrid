@@ -205,3 +205,14 @@ public enum ContentPlanner {
         return h
     }
 }
+
+public extension ContentPlanner {
+    @discardableResult
+    static func planAll(in d: Dungeon,
+                        index: DungeonIndex,
+                        themes: ThemeAssignment,
+                        seed: UInt64,
+                        specs: [SpawnSpec]) -> ContentPlan {
+        return planAll(in: d, graph: index.graph, themes: themes, seed: seed, specs: specs)
+    }
+}

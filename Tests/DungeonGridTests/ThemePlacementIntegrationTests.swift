@@ -84,7 +84,8 @@ import Testing
             SpawnSpec(kind: "loot",  themeNames: ["room","corridor"], policy: B),
         ]
 
-        let plan = ContentPlanner.planAll(in: d, graph: g, themes: themes, seed: 9, specs: specs)
+        let index = DungeonIndex(d)
+        let plan = ContentPlanner.planAll(in: d, index: index, themes: themes, seed: 9, specs: specs)
         // Ensure no exact-tile overlaps across kinds
         var seen = Set<Int>()
         for p in plan.placements {

@@ -13,7 +13,8 @@ import Testing
 
     @Test func regionRouteExists() {
         let d = DungeonGrid.generate(config: .init(width: 61, height: 39, algorithm: .bsp(BSPOptions()), ensureConnected: true, placeDoorsAndTags: true), seed: 7)
-        let g = Regions.extractGraph(d)
+        let index = DungeonIndex(d)
+        let g = index.graph
         guard let s = d.entrance, let t = d.exit else { return }
         let route = RegionRouting.routePoints(d, g, from: s, to: t, doorBias: 2)
         #expect(route != nil && !route!.isEmpty)
@@ -21,8 +22,9 @@ import Testing
 
     @Test func locksAreAppliedAndReturnAPlan() {
         let d = DungeonGrid.generate(config: .init(width: 61, height: 39, algorithm: .uniformRooms(UniformRoomsOptions()), ensureConnected: true, placeDoorsAndTags: true), seed: 11)
-        let g = Regions.extractGraph(d)
-        let (d2, plan) = LocksPlanner.planAndApply(d, graph: g, entrance: d.entrance, maxLocks: 2, doorBias: 2)
+        let index = DungeonIndex(d)
+        let g = index.graph
+        let (d2, plan) = LocksPlanner.planAndApply(d, index: DungeonIndex(d), maxLocks: 2, doorBias: 2)
         #expect(plan.locks.count <= 2)
 
         // Ensure at least one locked edge exists if we planned any locks

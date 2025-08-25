@@ -129,20 +129,32 @@ public enum Placer {
 
     /// Edge-aware BFS distances (like the one used for entrance/exit tagging).
     private static func edgeBFS(from start: Point, grid: Grid, edges: EdgeGrid) -> [Int] {
-        let w = grid.width, h = grid.height, total = w*h
+        let w = grid.width, h = grid.height, total = w * h
         var dist = Array(repeating: -1, count: total)
-        guard start.x >= 0 && start.x < w && start.y >= 0 && start.y < h && grid[start.x, start.y].isPassable else {
+
+        // validate start
+        guard start.x >= 0 && start.x < w && start.y >= 0 && start.y < h,
+              grid[start.x, start.y].isPassable else {
             return dist
         }
-        var q = [start.y*w + start.x]; dist[q[0]] = 0
 
-        while !q.isEmpty {
-            let cur = q.removeFirst()
-            let x = cur % w, y = cur / w, base = dist[cur]
+        @inline(__always) func idx(_ x: Int, _ y: Int) -> Int { y * w + x }
+
+        var q: [Int] = []
+        q.reserveCapacity(total / 4)
+        let s = idx(start.x, start.y)
+        dist[s] = 0
+        q.append(s)
+
+        var head = 0
+        while head < q.count {
+            let cur = q[head]; head += 1
+            let x = cur % w, y = cur / w
+            let base = dist[cur]
 
             // unified, edge-aware neighbors
             forEachNeighbor(x, y, w, h, grid, edges) { nx, ny in
-                let ni = ny*w + nx
+                let ni = idx(nx, ny)
                 if dist[ni] < 0 { dist[ni] = base + 1; q.append(ni) }
             }
         }
