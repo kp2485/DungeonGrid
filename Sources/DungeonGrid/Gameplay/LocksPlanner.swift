@@ -161,16 +161,3 @@ public enum LocksPlanner {
         return (out, plan)
     }
 }
-
-public extension LocksPlanner {
-    static func planAndApply(_ d: Dungeon,
-                             index: DungeonIndex,
-                             maxLocks: Int = 2,
-                             doorBias: Int = 2) -> (dungeon: Dungeon, plan: LocksPlan) {
-        return planAndApply(d,
-                            graph: index.graph,
-                            entrance: d.entrance,
-                            maxLocks: maxLocks,
-                            doorBias: doorBias)
-    }
-}
