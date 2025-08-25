@@ -85,7 +85,11 @@ import Testing
         ]
 
         let index = DungeonIndex(d)
-        let plan = ContentPlanner.planAll(in: d, index: index, themes: themes, seed: 9, specs: specs)
+        let plan = ContentPlanner.planAll(in: d,
+                                          graph: index.graph,
+                                          themes: themes,
+                                          seed: d.seed,
+                                          specs: specs)
         // Ensure no exact-tile overlaps across kinds
         var seen = Set<Int>()
         for p in plan.placements {
