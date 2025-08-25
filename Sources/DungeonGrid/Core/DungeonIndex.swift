@@ -79,20 +79,16 @@ public final class DungeonIndex: @unchecked Sendable {
 // MARK: - Convenience wrappers that reuse the cache
 
 public extension Themer {
-    /// Wrapper that reuses the cached graph & stats from `DungeonIndex`.
-    static func assignThemes(
-        dungeon d: Dungeon,
-        index: DungeonIndex,
-        seed: UInt64,
-        rules: [ThemeRule]
-    ) -> ThemeAssignment {
-        return assignThemes(
-            dungeon: d,
-            graph: index.graph,
-            stats: index.stats,
-            seed: seed,
-            rules: rules
-        )
+    /// Use cached graph + stats from DungeonIndex; seed precedes rules to match base API.
+    static func assignThemes(dungeon d: Dungeon,
+                             index: DungeonIndex,
+                             seed: UInt64,
+                             rules: [ThemeRule]) -> ThemeAssignment {
+        assignThemes(dungeon: d,
+                     graph: index.graph,
+                     stats: index.stats,
+                     seed: seed,
+                     rules: rules)
     }
 }
 
