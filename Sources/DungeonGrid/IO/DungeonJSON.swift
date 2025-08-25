@@ -12,6 +12,9 @@ import Foundation
 /// Compact: tiles/edges are 2-bit packed to Base64.
 public enum DungeonJSON {
 
+    /// Current on-disk JSON format version.
+    public static let currentVersion: Int = 1
+    
     public struct Snapshot: Codable {
         public let version: Int
         public let width: Int
@@ -31,7 +34,7 @@ public enum DungeonJSON {
         public let exit: [Int]?
         public let doorTiles: [[Int]]?
 
-        public init(version: Int = 1,
+        public init(version: Int = DungeonJSON.currentVersion,
                     width: Int,
                     height: Int,
                     seed: UInt64,
@@ -93,38 +96,110 @@ public enum DungeonJSON {
     public static func decode(_ data: Data) throws -> Dungeon {
         let dec = JSONDecoder()
         let s = try dec.decode(Snapshot.self, from: data)
-        guard s.version == 1 else { throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "Unsupported snapshot version \(s.version)")) }
 
+        // Version check (explicit)
+        guard s.version == DungeonJSON.currentVersion else {
+            throw DecodingError.dataCorrupted(.init(
+                codingPath: [],
+                debugDescription: "Unsupported snapshot version \(s.version); expected \(DungeonJSON.currentVersion)"
+            ))
+        }
+
+        // Dimensions
         let w = s.width, h = s.height
+        guard w > 0, h > 0 else {
+            throw DecodingError.dataCorrupted(.init(
+                codingPath: [],
+                debugDescription: "Invalid dimensions: width=\(w), height=\(h)"
+            ))
+        }
+
         // Tiles
         guard let tiles = TileCodec.unpackBase64(s.tilesB64, count: w*h) else {
-            throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "Bad tiles Base64"))
+            throw DecodingError.dataCorrupted(.init(
+                codingPath: [],
+                debugDescription: "Bad tiles Base64 or length mismatch (expected \(w*h))"
+            ))
         }
         var grid = Grid(width: w, height: h, fill: .wall)
         for i in 0..<(w*h) {
-            let x = i % w, y = i / w
-            grid[x, y] = tiles[i]
+            grid[i % w, i / w] = tiles[i]
         }
 
-        // Edges
-        guard let hEdges = EdgeCodec.unpackBase64(s.edgesHB64, count: w*(h+1)),
-              let vEdges = EdgeCodec.unpackBase64(s.edgesVB64, count: (w+1)*h) else {
-            throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "Bad edges Base64"))
+        // Edges (strict length checks)
+        guard let hEdges = EdgeCodec.unpackBase64(s.edgesHB64, count: w*(h+1)) else {
+            throw DecodingError.dataCorrupted(.init(
+                codingPath: [],
+                debugDescription: "Bad horizontal edges Base64 or length mismatch (expected \(w*(h+1)))"
+            ))
+        }
+        guard let vEdges = EdgeCodec.unpackBase64(s.edgesVB64, count: (w+1)*h) else {
+            throw DecodingError.dataCorrupted(.init(
+                codingPath: [],
+                debugDescription: "Bad vertical edges Base64 or length mismatch (expected \((w+1)*h))"
+            ))
         }
         var edges = EdgeGrid(width: w, height: h, fill: .wall)
         edges.h = hEdges
         edges.v = vEdges
 
-        // Rooms
-        let rooms = s.rooms.map { Room(id: $0.id, rect: Rect(x: $0.x, y: $0.y, width: $0.width, height: $0.height)) }
+        // Rooms (bounds checks)
+        let rooms: [Room] = try s.rooms.map { snap in
+            guard snap.width > 0, snap.height > 0 else {
+                throw DecodingError.dataCorrupted(.init(
+                    codingPath: [],
+                    debugDescription: "Room \(snap.id) has non-positive size (\(snap.width)×\(snap.height))"
+                ))
+            }
+            let maxX = snap.x + snap.width  - 1
+            let maxY = snap.y + snap.height - 1
+            guard snap.x >= 0, snap.y >= 0, maxX < w, maxY < h else {
+                throw DecodingError.dataCorrupted(.init(
+                    codingPath: [],
+                    debugDescription: "Room \(snap.id) out of bounds: rect=(\(snap.x),\(snap.y),\(snap.width),\(snap.height)) grid=(\(w)×\(h))"
+                ))
+            }
+            return Room(id: snap.id, rect: Rect(x: snap.x, y: snap.y, width: snap.width, height: snap.height))
+        }
 
-        // Optional points
-        let entrance = s.entrance.flatMap { $0.count == 2 ? Point($0[0], $0[1]) : nil }
-        let exit = s.exit.flatMap { $0.count == 2 ? Point($0[0], $0[1]) : nil }
-        let doors: [Point] = s.doorTiles?.compactMap { $0.count == 2 ? Point($0[0], $0[1]) : nil } ?? []
+        // Optional points (validate bounds when present)
+        func decodePoint(_ arr: [Int]?) throws -> Point? {
+            guard let a = arr else { return nil }
+            guard a.count == 2 else {
+                throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "Point must be [x,y]"))
+            }
+            let p = Point(a[0], a[1])
+            guard p.x >= 0, p.x < w, p.y >= 0, p.y < h else {
+                throw DecodingError.dataCorrupted(.init(
+                    codingPath: [], debugDescription: "Point out of bounds: (\(p.x),\(p.y))"
+                ))
+            }
+            return p
+        }
 
-        return Dungeon(grid: grid, rooms: rooms, seed: s.seed,
-                       doors: doors, entrance: entrance, exit: exit,
+        let entrance = try decodePoint(s.entrance)
+        let exit      = try decodePoint(s.exit)
+
+        // Optional door tiles (bounds-checked)
+        let doors: [Point] = try (s.doorTiles ?? []).map { a in
+            guard a.count == 2 else {
+                throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "Door tile must be [x,y]"))
+            }
+            let p = Point(a[0], a[1])
+            guard p.x >= 0, p.x < w, p.y >= 0, p.y < h else {
+                throw DecodingError.dataCorrupted(.init(
+                    codingPath: [], debugDescription: "Door tile out of bounds: (\(p.x),\(p.y))"
+                ))
+            }
+            return p
+        }
+
+        return Dungeon(grid: grid,
+                       rooms: rooms,
+                       seed: s.seed,
+                       doors: doors,
+                       entrance: entrance,
+                       exit: exit,
                        edges: edges)
     }
 }
