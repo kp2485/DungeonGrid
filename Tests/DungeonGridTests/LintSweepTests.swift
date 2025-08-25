@@ -25,7 +25,9 @@ import Testing
             for s in seeds {
                 let d = DungeonGrid.generate(config: cfg, seed: s)
                 let issues = DungeonLint.check(d)
-                #expect(issues.isEmpty, "Lint issues for seed \(s) algo \(cfg.algorithm): \(issues)")
+                #expect(expectOrDump(issues.isEmpty,
+                                     "Lint issues for seed \(s) algo \(cfg.algorithm): \(issues)",
+                                     dungeon: d))
             }
         }
     }

@@ -36,7 +36,10 @@ import Testing
         }
 
         let route = RegionRouting.route(g, from: rs, to: rt, doorBias: 0)
-        #expect(route != nil)
+        #expect(expectOrDump(route != nil,
+                             "Expected region route between entrance and exit",
+                             dungeon: d,
+                             writePPM: false))  // set true or env DUNGEON_WRITE_PPM=1 to write a PPM
     }
 
     @Test("Locks plan produces locked edges when locks exist")
