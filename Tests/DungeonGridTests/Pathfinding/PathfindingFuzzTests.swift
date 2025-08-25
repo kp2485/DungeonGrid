@@ -38,7 +38,6 @@ import Testing
         return out
     }
 
-    // BFS distance & predecessor map to validate A* optimality
     func bfs(_ d: Dungeon, from s: Point, to t: Point) -> (dist: [Int], prev: [Int]) {
         let w = d.grid.width, h = d.grid.height, N = w*h
         @inline(__always) func idx(_ p: Point) -> Int { p.y*w + p.x }
@@ -81,21 +80,21 @@ import Testing
         return out.reversed()
     }
 
-    // Try a bunch of passable pairs and compare A* to BFS
     @Test("A* matches BFS distance and respects edges")
     func compareToBFS() {
         let cfgs: [DungeonConfig] = [
             .init(width: 41, height: 25, algorithm: .bsp(BSPOptions()),         ensureConnected: true, placeDoorsAndTags: true),
             .init(width: 41, height: 25, algorithm: .maze(MazeOptions()),        ensureConnected: true, placeDoorsAndTags: true),
         ]
-        let seeds: [UInt64] = [5, 17, 29] // small set to keep runtime light
+        let seeds: [UInt64] = TestEnv.fuzzSeeds
+        let pairCount = TestEnv.fuzzPairs
 
         for cfg in cfgs {
             for s in seeds {
                 let d = DungeonGrid.generate(config: cfg, seed: s)
                 var rng = SplitMix64(x: s ^ 0xC0FFEE_BEEF)
 
-                // Collect some passable points
+                // Collect passable points (cap to keep runtime bounded)
                 var pts: [Point] = []
                 for _ in 0..<500 {
                     let x = rng.int(in: 0...(d.grid.width-1))
@@ -105,32 +104,27 @@ import Testing
                 }
                 if pts.count < 2 { continue }
 
-                // Check ~20 random pairs
-                for _ in 0..<20 {
+                // Check N random pairs (tuned by TestEnv)
+                for _ in 0..<pairCount {
                     let a = pts[rng.int(in: 0...(pts.count-1))]
                     let b = pts[rng.int(in: 0...(pts.count-1))]
                     if a == b { continue }
 
-                    // BFS truth
                     let (dist, prev) = bfs(d, from: a, to: b)
                     let w = d.grid.width
                     let bfsi = dist[b.y*w + b.x]
 
-                    // A* under default MovementPolicy (no diagonals)
                     let path = Pathfinder.shortestPath(in: d, from: a, to: b, movement: .init())
 
                     if bfsi < 0 {
-                        // unreachable → A* should also fail
                         #expect(expectOrDump(path == nil,
                                              "A* found a path where BFS says unreachable (from \(a) to \(b))",
                                              dungeon: d))
                     } else {
-                        // reachable → A* should return path of the same length
                         #expect(expectOrDump(path != nil,
                                              "A* failed to find a path (BFS says reachable) (from \(a) to \(b))",
                                              dungeon: d))
                         if let p = path {
-                            // step validity & length optimality
                             var ok = true
                             for i in 1..<p.count {
                                 let dx = abs(p[i].x - p[i-1].x), dy = abs(p[i].y - p[i-1].y)

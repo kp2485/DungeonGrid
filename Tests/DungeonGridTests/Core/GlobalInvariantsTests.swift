@@ -16,11 +16,11 @@ import Testing
     @Test("Lint invariants hold across seeds/algorithms")
     func entranceExitAndDoors() {
         let cfgs: [DungeonConfig] = [
-            .init(width: 41, height: 25, algorithm: .bsp(BSPOptions()), ensureConnected: true, placeDoorsAndTags: true),
-            .init(width: 41, height: 25, algorithm: .maze(MazeOptions()), ensureConnected: true, placeDoorsAndTags: true),
+            .init(width: 41, height: 25, algorithm: .bsp(BSPOptions()),         ensureConnected: true, placeDoorsAndTags: true),
+            .init(width: 41, height: 25, algorithm: .maze(MazeOptions()),        ensureConnected: true, placeDoorsAndTags: true),
             .init(width: 41, height: 25, algorithm: .uniformRooms(UniformRoomsOptions()), ensureConnected: true, placeDoorsAndTags: true),
         ]
-        let seeds: [UInt64] = [101, 202, 303]
+        let seeds: [UInt64] = TestEnv.fuzzSeeds
 
         for cfg in cfgs {
             for s in seeds {
@@ -35,7 +35,9 @@ import Testing
 
                 // Rely on DungeonLint for the full set of invariants.
                 let issues = DungeonLint.check(d)
-                #expect(issues.isEmpty, "Lint issues for seed \(s) algo \(cfg.algorithm): \(issues)")
+                #expect(expectOrDump(issues.isEmpty,
+                                     "Lint issues for seed \(s) algo \(cfg.algorithm): \(issues)",
+                                     dungeon: d))
             }
         }
     }

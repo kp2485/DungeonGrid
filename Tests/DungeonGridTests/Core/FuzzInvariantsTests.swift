@@ -13,7 +13,7 @@ import Testing
     @Test("DungeonLint holds across algos/seeds (small maps)")
     func lintAcrossSeeds() {
         // Keep run time modest; expand locally if you want.
-        let seeds: [UInt64] = [1, 7, 33, 55, 101]
+        let seeds: [UInt64] = TestEnv.fuzzSeeds
         let cfgs: [DungeonConfig] = [
             .init(width: 41, height: 25, algorithm: .bsp(BSPOptions()),         ensureConnected: true, placeDoorsAndTags: true),
             .init(width: 41, height: 25, algorithm: .maze(MazeOptions()),        ensureConnected: true, placeDoorsAndTags: true),

@@ -19,7 +19,7 @@ import Testing
             .init(width: 41, height: 25, algorithm: .maze(MazeOptions()), ensureConnected: true, placeDoorsAndTags: true),
             .init(width: 41, height: 25, algorithm: .uniformRooms(UniformRoomsOptions()), ensureConnected: true, placeDoorsAndTags: true),
         ]
-        let seeds: [UInt64] = [101, 202, 303]
+        let seeds: [UInt64] = TestEnv.fuzzSeeds
 
         for cfg in cfgs {
             for s in seeds {
