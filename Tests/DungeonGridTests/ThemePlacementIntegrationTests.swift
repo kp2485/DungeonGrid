@@ -5,7 +5,6 @@
 //  Created by Kyle Peterson on 8/23/25.
 //
 
-
 import Testing
 @testable import DungeonGrid
 
@@ -20,12 +19,13 @@ import Testing
                           ensureConnected: true, placeDoorsAndTags: true),
             seed: 1234
         )
-        let g = Regions.extractGraph(d)
+        let index = DungeonIndex(d)
+        let g = index.graph
         let s = RegionAnalysis.computeStats(dungeon: d, graph: g)
 
         // Theme rules: mark some far, bigger rooms as 'treasure'; fallbacks for other regions
         let rules: [ThemeRule] = [
-            ThemeRule(regionClass: .room,minArea: 16, minDistanceFromEntrance: 4,
+            ThemeRule(regionClass: .room, minArea: 16, minDistanceFromEntrance: 4,
                       options: [Theme("treasure")]),
             ThemeRule(regionClass: .room, options: [Theme("room")]),
             ThemeRule(regionClass: .corridor, options: [Theme("corridor")]),
@@ -46,16 +46,28 @@ import Testing
 
         let plan1 = ContentPlanner.planAll(in: d, graph: g, themes: assignment, seed: 777, specs: specs)
         let plan2 = ContentPlanner.planAll(in: d, graph: g, themes: assignment, seed: 777, specs: specs)
-        #expect(plan1 == plan2) // deterministic
+        #expect(expectOrDump(plan1 == plan2,
+                             "ContentPlanner determinism failed for identical seeds",
+                             dungeon: d,
+                             placements: plan1.placements))
 
         // Every placement must be in a region themed 'treasure'
         let (labels, _, w, _) = Regions.labelCells(d)
         for p in plan1.placements {
             let rid = labels[p.position.y * w + p.position.x]
-            #expect(rid != nil)
-            let th = assignment.regionToTheme[rid!]
-            #expect(th?.name == "treasure")
-            #expect(p.kind == "loot.treasure")
+            #expect(expectOrDump(rid != nil,
+                                 "Placement at \(p.position) not labeled",
+                                 dungeon: d,
+                                 placements: plan1.placements))
+            let th = rid.flatMap { assignment.regionToTheme[$0] }
+            #expect(expectOrDump(th?.name == "treasure",
+                                 "Non-treasure placement at \(p.position)",
+                                 dungeon: d,
+                                 placements: plan1.placements))
+            #expect(expectOrDump(p.kind == "loot.treasure",
+                                 "Wrong kind at \(p.position): \(p.kind)",
+                                 dungeon: d,
+                                 placements: plan1.placements))
         }
     }
 
@@ -67,7 +79,8 @@ import Testing
                           ensureConnected: true, placeDoorsAndTags: true),
             seed: 202
         )
-        let g = Regions.extractGraph(d)
+        let index = DungeonIndex(d)
+        let g = index.graph
         let s = RegionAnalysis.computeStats(dungeon: d, graph: g)
         // Simple theming so all regions have a theme
         let rules: [ThemeRule] = [
@@ -84,9 +97,8 @@ import Testing
             SpawnSpec(kind: "loot",  themeNames: ["room","corridor"], policy: B),
         ]
 
-        let index = DungeonIndex(d)
         let plan = ContentPlanner.planAll(in: d,
-                                          graph: index.graph,
+                                          graph: g,
                                           themes: themes,
                                           seed: d.seed,
                                           specs: specs)
@@ -94,7 +106,10 @@ import Testing
         var seen = Set<Int>()
         for p in plan.placements {
             let li = p.position.y * d.grid.width + p.position.x
-            #expect(!seen.contains(li))
+            #expect(expectOrDump(!seen.contains(li),
+                                 "Overlapping placement at \(p.position)",
+                                 dungeon: d,
+                                 placements: plan.placements))
             seen.insert(li)
         }
     }

@@ -33,9 +33,11 @@ import Testing
             seed: 202
         )
 
-        // Theming + a few room placements (same as before)
-        let g = Regions.extractGraph(d)
+        // Build index/graph for theming/overlays
+        let index = DungeonIndex(d)
+        let g = index.graph
         let stats = RegionAnalysis.computeStats(dungeon: d, graph: g)
+
         let rules: [ThemeRule] = [
             ThemeRule(regionClass: .room, options: [Theme("room")]),
             ThemeRule(regionClass: .corridor, options: [Theme("corridor")])
@@ -47,18 +49,24 @@ import Testing
 
         // ➕ Compute entrance→exit path (edge-aware A*)
         guard let s = d.entrance, let t = d.exit else {
-            #expect(Bool(false), "Expected entrance/exit to be present")
+            #expect(expectOrDump(false, "Expected entrance/exit to be present", dungeon: d))
             return
         }
         let path = Pathfinder.shortestPath(in: d, from: s, to: t, movement: .init())
-        #expect(path != nil, "Expected a path between entrance and exit")
+        #expect(expectOrDump(path != nil, "Expected a path between entrance and exit", dungeon: d))
 
         // Sanity: each step is 4-neighbor and passable
         if let p = path {
             for i in 1..<p.count {
                 let a = p[i-1], b = p[i]
-                #expect(abs(a.x - b.x) + abs(a.y - b.y) == 1)
-                #expect(d.grid[b.x, b.y].isPassable)
+                #expect(expectOrDump(abs(a.x - b.x) + abs(a.y - b.y) == 1,
+                                     "Non-4-neighbor step in path at index \(i)",
+                                     dungeon: d,
+                                     path: p))
+                #expect(expectOrDump(d.grid[b.x, b.y].isPassable,
+                                     "Path includes non-passable tile at \(b)",
+                                     dungeon: d,
+                                     path: p))
             }
         }
 
@@ -69,7 +77,12 @@ import Testing
             options: .init(cellSize: 5, edgeThickness: 1, drawOpenEdges: false, drawEdges: true, drawGrid: false),
             overlays: .init(graph: g, themes: themed, placements: placements, paths: pathsOverlay)
         )
-        #expect(!data.isEmpty)
+        #expect(expectOrDump(!data.isEmpty,
+                             "PPM renderer returned empty data",
+                             dungeon: d,
+                             path: path ?? [],
+                             placements: placements))
+
         // PPM header starts with "P6\n"
         let prefix = data.prefix(3)
         #expect(Array(prefix) == Array("P6\n".utf8))
@@ -82,7 +95,8 @@ import Testing
                           ensureConnected: true, placeDoorsAndTags: true),
             seed: 404
         )
-        let g = Regions.extractGraph(d)
+        let index = DungeonIndex(d)
+        let g = index.graph
         let stats = RegionAnalysis.computeStats(dungeon: d, graph: g)
         let themed = Themer.assignThemes(dungeon: d, graph: g, stats: stats, seed: 1, rules: [
             ThemeRule(regionClass: .room, options: [Theme("room")]),
@@ -94,11 +108,11 @@ import Testing
 
         // ➕ Compute path for overlay
         guard let s = d.entrance, let t = d.exit else {
-            #expect(Bool(false), "Expected entrance/exit to be present")
+            #expect(expectOrDump(false, "Expected entrance/exit to be present", dungeon: d))
             return
         }
         let path = Pathfinder.shortestPath(in: d, from: s, to: t, movement: .init())
-        #expect(path != nil, "Expected a path between entrance and exit")
+        #expect(expectOrDump(path != nil, "Expected a path between entrance and exit", dungeon: d))
         let pathsOverlay: [[Point]] = path != nil ? [path!] : []
 
         let name = "DungeonGrid-\(d.grid.width)x\(d.grid.height)-seed\(d.seed)-path.png"
