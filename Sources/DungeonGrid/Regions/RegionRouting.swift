@@ -63,13 +63,15 @@ public enum RegionRouting {
         return path.reversed()
     }
 
-    /// Convenience: route by points, using a fresh label map to find their regions.
+    /// Convenience: route by points, using a cached index to find their regions.
     public static func routePoints(_ d: Dungeon,
                                    _ g: RegionGraph,
                                    from: Point,
                                    to: Point,
                                    doorBias: Int = 0) -> [RegionID]? {
-        let (labels, _, w, _) = Regions.labelCells(d)
+        let index  = DungeonIndex(d)
+        let labels = index.labels
+        let w      = index.width
         guard let rs = Regions.regionID(at: from, labels: labels, width: w),
               let rt = Regions.regionID(at: to,   labels: labels, width: w) else { return nil }
         return route(g, from: rs, to: rt, doorBias: doorBias)

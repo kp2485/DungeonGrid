@@ -9,8 +9,8 @@ import Foundation
 
 public enum Placer {
 
-    /// Back-compat wrapper: keep the original API used by tests and callers.
-    /// Internally forwards to the index-based implementation to avoid re-labeling on large maps.
+    /// Back-compat convenience that avoids recomputing labels/graph.
+    /// Internally forwards to the index-based implementation.
     public static func plan(in d: Dungeon,
                             seed: UInt64,
                             kind: String,

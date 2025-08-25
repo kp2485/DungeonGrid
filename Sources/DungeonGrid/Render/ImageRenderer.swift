@@ -101,8 +101,8 @@ public enum ImageRenderer {
             return RGBA(UInt8((h >> 8) & 0xFF), UInt8((h >> 24) & 0xFF), UInt8((h >> 40) & 0xFF), 255)
         }
 
-        // Region labels for theming
-        let (labels, _, _, _) = Regions.labelCells(d)
+        // Region labels for theming (cached via index)
+        let labels = DungeonIndex(d).labels
 
         // Fill cells
         for y in 0..<H {

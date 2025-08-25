@@ -37,7 +37,10 @@ public enum LocksPlanner {
                                     maxLocks: Int = 2,
                                     doorBias: Int = 2) -> (dungeon: Dungeon, plan: LocksPlan) {
 
-        let (labels, _, w, h) = Regions.labelCells(d)
+        let index  = DungeonIndex(d)
+        let labels = index.labels
+        let w      = index.width
+        let h      = index.height
         @inline(__always) func idx(_ x:Int,_ y:Int)->Int { y*w + x }
 
         // 1) Pick entrance region (fallback to first room center)
