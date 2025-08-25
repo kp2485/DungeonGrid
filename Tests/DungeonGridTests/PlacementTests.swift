@@ -5,11 +5,6 @@
 //  Created by Kyle Peterson on 8/23/25.
 //
 
-//
-//  PlacementTests.swift
-//  DungeonGrid
-//
-
 import Testing
 @testable import DungeonGrid
 
