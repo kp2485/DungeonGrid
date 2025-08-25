@@ -102,3 +102,13 @@ public enum Pathfinder {
         return pathIdx.map { Point($0 % w, $0 / w) }
     }
 }
+
+public extension Pathfinder {
+    /// Shortest path using a unified PassagePolicy (for convenience).
+    static func shortestPath(in d: Dungeon,
+                             from s: Point,
+                             to t: Point,
+                             passage: PassagePolicy) -> [Point]? {
+        return shortestPath(in: d, from: s, to: t, movement: MovementPolicy(passage))
+    }
+}

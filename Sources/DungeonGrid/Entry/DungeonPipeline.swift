@@ -100,3 +100,23 @@ public struct DungeonPipeline: Sendable {
         DungeonPipeline(base: base, steps: steps + [s])
     }
 }
+
+public extension DungeonPipeline {
+    /// Convenience when placement heuristics want a single passage policy.
+    func place(kind: String,
+               policy: PlacementPolicy,
+               passage: PassagePolicy,
+               seed: UInt64) -> DungeonPipeline {
+        adding { res in
+            let index = DungeonIndex(res.dungeon)
+            // If/when you thread passage into Placer, forward it here.
+            // For now we still call existing Placer API (policy handles LOS knobs already).
+            let ps = Placer.plan(in: res.dungeon,
+                                 index: index,
+                                 seed: seed,
+                                 kind: kind,
+                                 policy: policy)
+            if res.placements[kind] != nil { res.placements[kind]! += ps } else { res.placements[kind] = ps }
+        }
+    }
+}

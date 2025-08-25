@@ -120,3 +120,19 @@ public enum Visibility {
         return result
     }
 }
+
+public extension Visibility {
+    static func hasLineOfSight(in d: Dungeon,
+                               from a: Point,
+                               to b: Point,
+                               passage: PassagePolicy) -> Bool {
+        return hasLineOfSight(in: d, from: a, to: b, policy: VisibilityPolicy(passage))
+    }
+
+    static func computeVisible(in d: Dungeon,
+                               from origin: Point,
+                               radius: Int,
+                               passage: PassagePolicy) -> [Point] {
+        return computeVisible(in: d, from: origin, radius: radius, policy: VisibilityPolicy(passage))
+    }
+}
