@@ -5,12 +5,66 @@
 //  Created by Kyle Peterson on 8/23/25.
 //
 
-
 import Foundation
 
 public enum DungeonGrid {
-    @discardableResult
+    
+    /// Base generation entry point.
+    /// Applies `ensureConnected` and `placeDoorsAndTags` when enabled in `config`
+    /// to match test expectations (entrance/exit present when appropriate).
     public static func generate(config: DungeonConfig, seed: UInt64) -> Dungeon {
+        // 1) Base
+        let base: Dungeon
+        switch config.algorithm {
+        case .bsp(let opts):
+            var g = BSPGenerator(options: opts)
+            base = g.generate(width: config.width, height: config.height, seed: seed)
+        case .maze(let opts):
+            var g = MazeGenerator(options: opts)
+            base = g.generate(width: config.width, height: config.height, seed: seed)
+        case .caves(let opts):
+            var g = CavesGenerator(options: opts)
+            base = g.generate(width: config.width, height: config.height, seed: seed)
+        case .uniformRooms(let opts):
+            var g = UniformRoomsGenerator(options: opts)
+            base = g.generate(width: config.width, height: config.height, seed: seed)
+        }
+        
+        // 2) Honor config flags (keeps generate() convenient for tests)
+        var d = base
+        if config.ensureConnected {
+            d = Connectivity.ensureConnected(d, seed: seed)
+        }
+        if config.placeDoorsAndTags {
+            d = EdgeDoors.placeDoorsAndTag(d, seed: seed)
+        }
+        return d
+    }
+    
+    /// High-level generation with optional post steps and **batch placement**.
+    ///
+    /// Steps default to using the same `seed` unless you provide per-kind seeds in `requests`.
+    /// - Parameters:
+    ///   - config: base generation config (width/height/algorithm flags)
+    ///   - seed: master seed used for base generation and defaulted across steps
+    ///   - ensureConnected: run connectivity pass (defaults to `config.ensureConnected`)
+    ///   - placeDoorsAndTags: run door placement + entrance/exit tagging (defaults to `config.placeDoorsAndTags`)
+    ///   - doorPolicy: rasterization policy for door tiles/edges
+    ///   - locks: optional locks planning parameters
+    ///   - themes: optional theming rules and a seed offset
+    ///   - requests: batch placement requests (kind/policy/seed)
+    /// - Returns: full pipeline result (dungeon + placements + optional plans/themes + metrics)
+    public static func generateFull(
+        config: DungeonConfig,
+        seed: UInt64,
+        ensureConnected: Bool? = nil,
+        placeDoorsAndTags: Bool? = nil,
+        doorPolicy: DoorPolicy = .init(),
+        locks: (maxLocks: Int, doorBias: Int)? = nil,
+        themes: (rules: [ThemeRule], seedOffset: UInt64)? = nil,
+        requests: [PlacementRequest]
+    ) -> DungeonPipelineResult {
+        
         // 1) Base generation
         let base: Dungeon
         switch config.algorithm {
@@ -28,63 +82,7 @@ public enum DungeonGrid {
             base = g.generate(width: config.width, height: config.height, seed: seed)
         }
         
-        // 2) Compose post steps explicitly
-        var pipe = DungeonPipeline(base: base)
-        if config.ensureConnected {
-            pipe = pipe.ensureConnected(seed: seed)
-        }
-        if config.placeDoorsAndTags {
-            pipe = pipe.placeDoors(seed: seed)
-        }
-        
-        // 3) Execute
-        let result = pipe.run()
-        return result.dungeon
-    }
-    
-    /// Generate a dungeon and (optionally) run common post steps via a single call.
-    ///
-    /// - Parameters:
-    ///   - config: base generation config
-    ///   - seed: base seed used for all steps (you can offset per step below)
-    ///   - ensureConnected: run connectivity pass (default: config.ensureConnected)
-    ///   - placeDoorsAndTags: run door placement + entrance/exit tagging (default: config.placeDoorsAndTags)
-    ///   - doorPolicy: door rasterization policy (optional; default .init())
-    ///   - locks: optional locks plan parameters; when provided, runs LocksPlanner
-    ///   - themes: optional tuple (rules, seedOffset) to run Themer
-    ///   - placements: optional list of (kind, policy, seedOffset) to plan placements
-    ///
-    /// - Returns: DungeonPipelineResult (dungeon + optional locks, themes, placements)
-    
-    public static func generateFull(
-        config: DungeonConfig,
-        seed: UInt64,
-        ensureConnected: Bool? = nil,
-        placeDoorsAndTags: Bool? = nil,
-        doorPolicy: DoorPolicy = .init(),
-        locks: (maxLocks: Int, doorBias: Int)? = nil,
-        themes: (rules: [ThemeRule], seedOffset: UInt64)? = nil,
-        placements: [(kind: String, policy: PlacementPolicy, seedOffset: UInt64)] = []
-    ) -> DungeonPipelineResult {
-        
-        // 1) Base generation (same as generate)
-        let base: Dungeon
-        switch config.algorithm {
-        case .bsp(let opts):
-            var g = BSPGenerator(options: opts)
-            base = g.generate(width: config.width, height: config.height, seed: seed)
-        case .maze(let opts):
-            var g = MazeGenerator(options: opts)
-            base = g.generate(width: config.width, height: config.height, seed: seed)
-        case .caves(let opts):
-            var g = CavesGenerator(options: opts)
-            base = g.generate(width: config.width, height: config.height, seed: seed)
-        case .uniformRooms(let opts):
-            var g = UniformRoomsGenerator(options: opts)
-            base = g.generate(width: config.width, height: config.height, seed: seed)
-        }
-        
-        // 2) Compose a pipeline (use base seed unless an explicit offset is provided)
+        // 2) Compose pipeline
         var pipe = DungeonPipeline(base: base)
         
         if (ensureConnected ?? config.ensureConnected) {
@@ -99,11 +97,11 @@ public enum DungeonGrid {
         if let t = themes {
             pipe = pipe.theme(seed: seed &+ t.seedOffset, rules: t.rules)
         }
-        for p in placements {
-            pipe = pipe.place(kind: p.kind, policy: p.policy, seed: seed &+ p.seedOffset)
+        if !requests.isEmpty {
+            pipe = pipe.placeAll(requests)
         }
         
-        // 3) Run and return the full result
+        // 3) Run and return
         return pipe.run()
     }
 }

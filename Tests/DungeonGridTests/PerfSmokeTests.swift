@@ -8,7 +8,6 @@
 //  These are not thresholded to avoid flakiness; they provide regression visibility.
 //
 
-
 import Foundation
 import Testing
 @testable import DungeonGrid
@@ -21,7 +20,26 @@ import Testing
         let end = DispatchTime.now().uptimeNanoseconds
         let ms = Double(end - start) / 1_000_000.0
         print(String(format: "[perf] %-28s %8.3f ms", label, ms))
-        return ms / 1000.0 // seconds
+        return ms / 1000.0
+    }
+
+    // Helpers: deterministic first/second passable points
+    private func firstPassable(_ d: Dungeon) -> Point? {
+        for y in 0..<d.grid.height {
+            for x in 0..<d.grid.width where d.grid[x, y].isPassable {
+                return Point(x, y)
+            }
+        }
+        return nil
+    }
+    private func secondPassable(_ d: Dungeon, excluding a: Point) -> Point? {
+        for y in 0..<d.grid.height {
+            for x in 0..<d.grid.width where d.grid[x, y].isPassable {
+                let p = Point(x, y)
+                if p != a { return p }
+            }
+        }
+        return nil
     }
 
     @Test("Generate + pipeline (BSP 61x39)")
@@ -36,12 +54,10 @@ import Testing
         }
         #expect(dungeon != nil && dungeon.grid.width == 61)
 
-        // Index construction timing
         _ = time("DungeonIndex build") {
             _ = DungeonIndex(dungeon)
         }
 
-        // Placement timing
         var pol = PlacementPolicy()
         pol.count = 20
         pol.regionClass = .corridorsOnly
@@ -81,13 +97,26 @@ import Testing
         let idx = DungeonIndex(d)
         let g = idx.graph
 
-        let a = d.entrance ?? Point(1, 1)
-        let b = d.exit     ?? Point(min(d.grid.width-2, a.x+15), a.y)
+        // Choose labeled, passable endpoints (prefer entrance/exit)
+        let a: Point = {
+            if let s = d.entrance, d.grid[s.x, s.y].isPassable { return s }
+            return firstPassable(d) ?? Point(1, 1)
+        }()
+        let b: Point = {
+            if let t = d.exit, d.grid[t.x, t.y].isPassable { return t }
+            return secondPassable(d, excluding: a) ?? a
+        }()
+        // If we failed to get two distinct passables, bail out cleanly.
+        if a == b { return }
+
+        // Map points → region ids using index labels; guard to avoid force unwrap.
+        guard
+            let rs = Regions.regionID(at: a, labels: idx.labels, width: idx.width),
+            let rt = Regions.regionID(at: b, labels: idx.labels, width: idx.width)
+        else { return }
 
         _ = time("Routing via index.graph") {
-            _ = RegionRouting.route(g, from: Regions.regionID(at: a, labels: idx.labels, width: idx.width)!,
-                                       to: Regions.regionID(at: b, labels: idx.labels, width: idx.width)!,
-                                       doorBias: 0)
+            _ = RegionRouting.route(g, from: rs, to: rt, doorBias: 0)
         }
         _ = time("Routing via routePoints(index:)") {
             _ = RegionRouting.routePoints(d, index: idx, from: a, to: b, doorBias: 0)
