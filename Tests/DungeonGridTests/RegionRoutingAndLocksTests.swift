@@ -24,22 +24,25 @@ import Testing
         let g = index.graph
 
         guard let a = d.entrance, let b = d.exit else {
-            #expect(Bool(false), "Expected entrance/exit to exist")
+            #expect(expectOrDump(false,
+                                 "Expected entrance/exit to exist",
+                                 dungeon: d))
             return
         }
         guard
             let rs = Regions.regionID(at: a, labels: index.labels, width: index.width),
             let rt = Regions.regionID(at: b, labels: index.labels, width: index.width)
         else {
-            #expect(Bool(false), "Entrance/exit not in labeled regions")
+            #expect(expectOrDump(false,
+                                 "Entrance/exit not in labeled regions",
+                                 dungeon: d))
             return
         }
 
         let route = RegionRouting.route(g, from: rs, to: rt, doorBias: 0)
         #expect(expectOrDump(route != nil,
                              "Expected region route between entrance and exit",
-                             dungeon: d,
-                             writePPM: false))  // set true or env DUNGEON_WRITE_PPM=1 to write a PPM
+                             dungeon: d))
     }
 
     @Test("Locks plan produces locked edges when locks exist")
@@ -59,22 +62,23 @@ import Testing
                                                    maxLocks: 2,
                                                    doorBias: 2)
 
-        // Ensure at least one locked edge exists if we planned any locks
         if !plan.locks.isEmpty {
             var foundLocked = false
-            // Vertical edges: (vx: x, vy: y), x in 1..<w, y in 0..<h
+            // Vertical edges: (vx: x, vy: y)
             for y in 0..<d2.grid.height {
                 for x in 1..<d2.grid.width where d2.edges[vx: x, vy: y] == EdgeType.locked {
                     foundLocked = true
                 }
             }
-            // Horizontal edges: (hx: x, hy: y), y in 1..<h, x in 0..<w
+            // Horizontal edges: (hx: x, hy: y)
             for x in 0..<d2.grid.width {
                 for y in 1..<d2.grid.height where d2.edges[hx: x, hy: y] == EdgeType.locked {
                     foundLocked = true
                 }
             }
-            #expect(foundLocked)
+            #expect(expectOrDump(foundLocked,
+                                 "No EdgeType.locked edges found despite non-empty locks plan",
+                                 dungeon: d2))
         }
     }
 }
