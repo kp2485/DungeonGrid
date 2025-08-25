@@ -9,19 +9,25 @@ import Foundation
 
 public enum Placer {
 
-    /// Plan placements according to a policy; deterministic given `seed`.
-    /// - Parameters:
-    ///   - d: dungeon
-    ///   - seed: PRNG seed for determinism
-    ///   - kind: a string tag for what’s being placed ("enemy", "loot.health", etc.)
-    ///   - policy: constraints (rooms/corridors, spacing, LOS, etc.)
-    /// - Returns: placements (positions + region ids)
+    /// Back-compat wrapper: keep the original API used by tests and callers.
+    /// Internally forwards to the index-based implementation to avoid re-labeling on large maps.
     public static func plan(in d: Dungeon,
                             seed: UInt64,
                             kind: String,
                             policy: PlacementPolicy) -> [Placement] {
+        let index = DungeonIndex(d)
+        return plan(in: d, index: index, seed: seed, kind: kind, policy: policy)
+    }
+
+    /// Plan placements using a cached DungeonIndex (avoids recomputing labels/kinds).
+    public static func plan(in d: Dungeon,
+                            index: DungeonIndex,
+                            seed: UInt64,
+                            kind: String,
+                            policy: PlacementPolicy) -> [Placement] {
         let w = d.grid.width, h = d.grid.height
-        let (labels, kinds, _, _) = Regions.labelCells(d)
+        let labels = index.labels
+        let kinds  = index.kinds
 
         // Collect candidate tiles
         var candidates: [Point] = []
@@ -61,7 +67,7 @@ public enum Placer {
                                          diagonalThroughCorners: false)
 
         // Filter candidates by constraints
-        candidates = candidates.filter { p in
+        let filtered: [Point] = candidates.filter { p in
             if let mind = policy.minDistanceFromEntrance, let dist = dist {
                 let di = dist[p.y * w + p.x]
                 if di < 0 || di < mind { return false }
@@ -76,21 +82,22 @@ public enum Placer {
 
         // Deterministic shuffle (SplitMix64)
         var rng = SplitMix64(seed: seed ^ 0xC0FFEE_BEEF_1234)
-        fisherYatesShuffle(&candidates, rng: &rng)
+        var shuffled = filtered
+        fisherYatesShuffle(&shuffled, rng: &rng)
 
         // Decide how many to place
         let targetCount: Int = {
             if let c = policy.count { return max(0, c) }
             if let dens = policy.density {
-                return max(0, min(candidates.count, Int((dens * Double(candidates.count)).rounded())))
+                return max(0, min(shuffled.count, Int((dens * Double(shuffled.count)).rounded())))
             }
-            return min(10, candidates.count) // sensible default
+            return min(10, shuffled.count) // sensible default
         }()
 
         // Greedy spacing
         var chosen: [Point] = []
         chosen.reserveCapacity(targetCount)
-        for p in candidates {
+        for p in shuffled {
             if chosen.count == targetCount { break }
             if policy.minSpacing > 0 {
                 var ok = true

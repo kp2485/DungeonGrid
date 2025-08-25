@@ -10,12 +10,14 @@ import Foundation
 
 public struct UniformRoomsOptions: Sendable, Equatable {
     public var attempts: Int = 150
-    public var roomMin = (w: 4, h: 3)
-    public var roomMax = (w: 9, h: 7)
+    public var roomMin: (w: Int, h: Int) = (4, 4)
+    public var roomMax: (w: Int, h: Int) = (10, 8)
     public var separation: Int = 1
+
     public init() {}
 }
 
+// Keep the custom equality here (only here).
 public extension UniformRoomsOptions {
     static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.attempts == rhs.attempts &&
