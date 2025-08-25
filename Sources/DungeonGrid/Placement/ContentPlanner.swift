@@ -40,7 +40,13 @@ public enum ContentPlanner {
                                themes: ThemeAssignment,
                                seed: UInt64,
                                specs: [SpawnSpec]) -> ContentPlan {
-        let (labels, kinds, w, h) = Regions.labelCells(d)
+        
+        // Use cached topology via DungeonIndex to avoid recomputing labels/graph.
+        let index = DungeonIndex(d)
+        let labels = index.labels
+        let kinds  = index.kinds
+        let w      = index.width
+        let h      = index.height
 
         // Fast lookup for region theme matches
         @inline(__always)
