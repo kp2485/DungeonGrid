@@ -54,7 +54,6 @@ public enum LocksPlanner {
         }
 
         // 2) Build MST over region graph using RegionEdge.weight(doorBias:)
-        let nodes = Array(g.nodes.keys)
         var inTree = Set<RegionID>()
         var parent: [RegionID: RegionID] = [:]
         var bestW: [RegionID: Int] = [:]
@@ -73,7 +72,7 @@ public enum LocksPlanner {
             bestW[v] = w; bestEdgeFrom[v] = startRegion
             heap.push(priority: w, value: v.raw)
         }
-        while let (pr, raw) = heap.pop() {
+        while let (_, raw) = heap.pop() {
             let v = RegionID(raw: raw)
             if inTree.contains(v) { continue }
             // Accept edge

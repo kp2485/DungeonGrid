@@ -31,7 +31,7 @@ import Testing
 
         do {
             _ = try DungeonJSON.decode(json)
-            #expect(false, "expected decode to throw on unsupported version")
+            #expect(Bool(false), "expected decode to throw on unsupported version")
         } catch {
             #expect(true) // ok
         }
@@ -57,7 +57,7 @@ import Testing
 
         do {
             _ = try DungeonJSON.decode(json)
-            #expect(false, "expected decode to throw on bad Base64")
+            #expect(Bool(false), "expected decode to throw on bad Base64")
         } catch {
             #expect(true) // ok
         }
@@ -107,7 +107,7 @@ import Testing
         let badData = try JSONEncoder().encode(snap2)
         do {
             _ = try DungeonJSON.decode(badData)
-            #expect(false, "expected decode to throw on out-of-bounds room")
+            #expect(Bool(false), "expected decode to throw on out-of-bounds room")
         } catch {
             #expect(true) // ok
         }

@@ -122,7 +122,7 @@ import Testing
 
         for p in res.placements {
             guard let it = byID[p.id] else {
-                #expect(false, "Missing item for placement \(p.id)")
+                #expect(Bool(false), "Missing item for placement \(p.id)")
                 continue
             }
             let tiles = footprintTiles(anchor: p.position, footprint: it.footprint)

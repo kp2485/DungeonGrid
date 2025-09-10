@@ -51,7 +51,7 @@ import Testing
 
     @Test("Locking an edge can block a path")
     func lockingBlocks() {
-        var d = DungeonGrid.generate(
+        let d = DungeonGrid.generate(
             config: .init(width: 41, height: 25, algorithm: .bsp(BSPOptions()), ensureConnected: true, placeDoorsAndTags: true),
             seed: 9
         )
@@ -67,7 +67,7 @@ import Testing
         func tryLocking(_ update: (inout EdgeGrid) -> Void) -> Bool {
             var e = d.edges
             update(&e)
-            var clone = Dungeon(grid: d.grid, rooms: d.rooms, seed: d.seed,
+            let clone = Dungeon(grid: d.grid, rooms: d.rooms, seed: d.seed,
                                 doors: d.doors, entrance: d.entrance, exit: d.exit, edges: e)
             return Pathfinder.shortestPath(in: clone, from: s, to: t) == nil
         }

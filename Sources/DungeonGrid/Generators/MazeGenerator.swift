@@ -46,7 +46,7 @@ public struct MazeGenerator {
         stack.append(start); mark(start.x, start.y)
 
         while let (cx, cy) = stack.popLast() {
-            var nexts = neighbors(cx, cy).filter { !seen($0.nx, $0.ny) }
+            let nexts = neighbors(cx, cy).filter { !seen($0.nx, $0.ny) }
             if nexts.isEmpty { continue }
             // Continue from current cell later
             stack.append((cx, cy))

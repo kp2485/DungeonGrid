@@ -270,7 +270,7 @@ public enum ExternalPlacer {
                     if !ok { continue }
                     if !fitsGlobal(it, cand.tiles, cand.a) { continue }
                     // Also enforce minSpacing against already-chosen group anchors
-                    let minSp = max(0, it.policy.minSpacing ?? 0)
+                    let minSp = max(0, it.policy.minSpacing)
                     if minSp > 0 {
                         for other in chosen {
                             let m = abs(cand.a.x - other.a.x) + abs(cand.a.y - other.a.y)
