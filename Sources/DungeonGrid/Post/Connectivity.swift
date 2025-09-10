@@ -46,7 +46,7 @@ public enum Connectivity {
 
         if components.count <= 1 { return dungeon }
 
-        var reps: [(x: Int, y: Int)] = components.map { comp in
+        let reps: [(x: Int, y: Int)] = components.map { comp in
             let rep = comp.min()!
             return (rep % grid.width, rep / grid.width)
         }

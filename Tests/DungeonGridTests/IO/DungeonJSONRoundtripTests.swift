@@ -25,23 +25,17 @@ import Testing
         do {
             data1 = try DungeonJSON.encode(d1)
         } catch {
-            #expect(expectOrDump(false,
-                                 "DungeonJSON.encode failed: \(error)",
-                                 dungeon: d1))
+            #expect(Bool(false), "DungeonJSON.encode failed: \(error)")
             return
         }
-        #expect(expectOrDump(!data1.isEmpty,
-                             "DungeonJSON.encode produced empty data",
-                             dungeon: d1))
+        #expect(!data1.isEmpty, "DungeonJSON.encode produced empty data")
 
         // 2) Decode back to Dungeon (throws)
         let d2: Dungeon
         do {
             d2 = try DungeonJSON.decode(data1)
         } catch {
-            #expect(expectOrDump(false,
-                                 "DungeonJSON.decode failed: \(error)",
-                                 dungeon: d1))
+            #expect(Bool(false), "DungeonJSON.decode failed: \(error)")
             return
         }
 
@@ -50,20 +44,14 @@ import Testing
         do {
             data2 = try DungeonJSON.encode(d2)
         } catch {
-            #expect(expectOrDump(false,
-                                 "DungeonJSON re-encode failed: \(error)",
-                                 dungeon: d2))
+            #expect(Bool(false), "DungeonJSON re-encode failed: \(error)")
             return
         }
-        #expect(expectOrDump(!data2.isEmpty,
-                             "Re-encode produced empty data",
-                             dungeon: d2))
+        #expect(!data2.isEmpty, "Re-encode produced empty data")
 
         if data1 != data2 {
             let why = diffJSONData(data1, data2)
-            _ = expectOrDump(false,
-                             "JSON roundtrip mismatch: \(why)\n(data1: \(data1.count) bytes, data2: \(data2.count) bytes)",
-                             dungeon: d2)
+            #expect(Bool(false), "JSON roundtrip mismatch: \(why)\n(data1: \(data1.count) bytes, data2: \(data2.count) bytes)")
         }
 
         #expect(data1 == data2)
@@ -82,9 +70,7 @@ import Testing
         do {
             data = try DungeonJSON.encode(d)
         } catch {
-            #expect(expectOrDump(false,
-                                 "DungeonJSON.encode failed: \(error)",
-                                 dungeon: d))
+            #expect(Bool(false), "DungeonJSON.encode failed: \(error)")
             return
         }
 
@@ -93,29 +79,19 @@ import Testing
         do {
             d2 = try DungeonJSON.decode(data)
         } catch {
-            #expect(expectOrDump(false,
-                                 "DungeonJSON.decode failed: \(error)",
-                                 dungeon: d))
+            #expect(Bool(false), "DungeonJSON.decode failed: \(error)")
             return
         }
 
         // Tiles, edges, and (if present) S/E should match.
-        #expect(expectOrDump(d.grid.tiles == d2.grid.tiles,
-                             "Grid tiles differ after roundtrip",
-                             dungeon: d2))
-        #expect(expectOrDump(d.edges.h == d2.edges.h && d.edges.v == d2.edges.v,
-                             "Edges differ after roundtrip",
-                             dungeon: d2))
+        #expect(d.grid.tiles == d2.grid.tiles, "Grid tiles differ after roundtrip")
+        #expect(d.edges.h == d2.edges.h && d.edges.v == d2.edges.v, "Edges differ after roundtrip")
 
         if let s1 = d.entrance, let s2 = d2.entrance {
-            #expect(expectOrDump(s1 == s2,
-                                 "Entrance changed after roundtrip",
-                                 dungeon: d2))
+            #expect(s1 == s2, "Entrance changed after roundtrip")
         }
         if let e1 = d.exit, let e2 = d2.exit {
-            #expect(expectOrDump(e1 == e2,
-                                 "Exit changed after roundtrip",
-                                 dungeon: d2))
+            #expect(e1 == e2, "Exit changed after roundtrip")
         }
     }
 }

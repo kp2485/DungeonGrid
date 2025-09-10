@@ -30,10 +30,7 @@ import Testing
             let p1 = Placer.plan(in: d, seed: 999, kind: "enemy", policy: pol)
             let p2 = Placer.plan(in: d, seed: 999, kind: "enemy", policy: pol)
 
-            #expect(expectOrDump(p1 == p2,
-                                 "Placement determinism failed for worldSeed \(worldSeed)",
-                                 dungeon: d,
-                                 placements: p1))
+            #expect(p1 == p2, "Placement determinism failed for worldSeed \(worldSeed)")
         }
     }
 
@@ -55,30 +52,18 @@ import Testing
             pol.count = 12
             pol.regionClass = .roomsOnly
             let rooms = Placer.plan(in: d, seed: 1, kind: "loot", policy: pol)
-            #expect(expectOrDump(!rooms.isEmpty,
-                                 "Expected some room placements for worldSeed \(worldSeed)",
-                                 dungeon: d,
-                                 placements: rooms))
+            #expect(!rooms.isEmpty, "Expected some room placements for worldSeed \(worldSeed)")
             for r in rooms {
                 let rid = labels[r.position.y * w + r.position.x]
-                #expect(expectOrDump(isRoom(rid),
-                                     "Non-room placement in roomsOnly policy at \(r.position)",
-                                     dungeon: d,
-                                     placements: rooms))
+                #expect(isRoom(rid), "Non-room placement in roomsOnly policy at \(r.position)")
             }
 
             pol.regionClass = .corridorsOnly
             let corrs = Placer.plan(in: d, seed: 1, kind: "loot", policy: pol)
-            #expect(expectOrDump(!corrs.isEmpty,
-                                 "Expected some corridor placements for worldSeed \(worldSeed)",
-                                 dungeon: d,
-                                 placements: corrs))
+            #expect(!corrs.isEmpty, "Expected some corridor placements for worldSeed \(worldSeed)")
             for r in corrs {
                 let rid = labels[r.position.y * w + r.position.x]
-                #expect(expectOrDump(!isRoom(rid),
-                                     "Room placement in corridorsOnly policy at \(r.position)",
-                                     dungeon: d,
-                                     placements: corrs))
+                #expect(!isRoom(rid), "Room placement in corridorsOnly policy at \(r.position)")
             }
         }
     }
@@ -105,10 +90,7 @@ import Testing
                 if m < 4 { ok = false }
             }
         }
-        #expect(expectOrDump(ok,
-                             "Min spacing violated (expected ≥ 4)",
-                             dungeon: d,
-                             placements: ps))
+        #expect(ok, "Min spacing violated (expected ≥ 4)")
     }
 
     @Test("Avoid LOS from entrance and avoid door tiles")
@@ -132,15 +114,13 @@ import Testing
         let ps = Placer.plan(in: d, seed: 101, kind: "enemy", policy: pol)
 
         for p in ps {
-            #expect(expectOrDump(d.grid[p.position.x, p.position.y] != .door,
-                                 "Placement landed on a door tile at \(p.position)",
-                                 dungeon: d,
-                                 placements: ps))
-            #expect(expectOrDump(!Visibility.hasLineOfSight(in: d, from: s, to: p.position,
-                                                           policy: .init(doorTransparent: true)),
-                                 "Placement visible from entrance at \(p.position)",
-                                 dungeon: d,
-                                 placements: ps))
+            #expect(d.grid[p.position.x, p.position.y] != .door,
+                    "Placement landed on a door tile at \(p.position)")
+            #expect(!Visibility.hasLineOfSight(in: d,
+                                              from: s,
+                                              to: p.position,
+                                              policy: .init(doorTransparent: true)),
+                    "Placement visible from entrance at \(p.position)")
         }
     }
 }

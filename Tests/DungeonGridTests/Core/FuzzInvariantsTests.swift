@@ -24,23 +24,20 @@ import Testing
             for s in seeds {
                 let d = DungeonGrid.generate(config: cfg, seed: s)
                 let issues = DungeonLint.check(d)
-                #expect(expectOrDump(issues.isEmpty,
-                                     "Lint issues for seed \(s) algo \(cfg.algorithm): \(issues)",
-                                     dungeon: d))
+                #expect(issues.isEmpty, "Lint issues for seed \(s) algo \(cfg.algorithm): \(issues)")
+
                 // If both S/E exist, sanity-assert we can route at region level
                 if let a = d.entrance, let b = d.exit {
-                    let idx = DungeonIndex(d)
+                    let index = DungeonIndex(d)
                     guard
-                        let rs = Regions.regionID(at: a, labels: idx.labels, width: idx.width),
-                        let rt = Regions.regionID(at: b, labels: idx.labels, width: idx.width)
+                        let rs = Regions.regionID(at: a, labels: index.labels, width: index.width),
+                        let rt = Regions.regionID(at: b, labels: index.labels, width: index.width)
                     else {
-                        #expect(expectOrDump(false, "Entrance/exit not in labeled regions", dungeon: d))
+                        #expect(Bool(false), "Entrance/exit not in labeled regions")
                         continue
                     }
-                    let r = RegionRouting.route(idx.graph, from: rs, to: rt, doorBias: 0)
-                    #expect(expectOrDump(r != nil,
-                                         "No region route between S and E",
-                                         dungeon: d))
+                    let route = RegionRouting.route(index.graph, from: rs, to: rt, doorBias: 0)
+                    #expect(route != nil, "No region route between entrance and exit")
                 }
             }
         }

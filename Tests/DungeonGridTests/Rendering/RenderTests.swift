@@ -49,23 +49,19 @@ import Testing
         let placements = Placer.plan(in: d, seed: 77, kind: "loot", policy: pol)
 
         guard let s = d.entrance, let t = d.exit else {
-            #expect(expectOrDump(false, "Expected entrance/exit to be present", dungeon: d))
+            #expect(Bool(false), "Expected entrance/exit to be present")
             return
         }
         let path = Pathfinder.shortestPath(in: d, from: s, to: t, movement: .init())
-        #expect(expectOrDump(path != nil, "Expected a path between entrance and exit", dungeon: d))
+        #expect(path != nil, "Expected a path between entrance and exit")
 
         if let p = path {
             for i in 1..<p.count {
                 let a = p[i-1], b = p[i]
-                #expect(expectOrDump(abs(a.x - b.x) + abs(a.y - b.y) == 1,
-                                     "Non-4-neighbor step in path at index \(i)",
-                                     dungeon: d,
-                                     path: p))
-                #expect(expectOrDump(d.grid[b.x, b.y].isPassable,
-                                     "Path includes non-passable tile at \(b)",
-                                     dungeon: d,
-                                     path: p))
+                #expect(abs(a.x - b.x) + abs(a.y - b.y) == 1,
+                        "Non-4-neighbor step in path at index \(i)")
+                #expect(d.grid[b.x, b.y].isPassable,
+                        "Path includes non-passable tile at \(b)")
             }
         }
 
@@ -76,11 +72,7 @@ import Testing
             options: .init(cellSize: 5, edgeThickness: 1, drawOpenEdges: false, drawEdges: true, drawGrid: false),
             overlays: .init(graph: g, themes: themed, placements: placements, paths: pathsOverlay)
         )
-        #expect(expectOrDump(!data.isEmpty,
-                             "PPM renderer returned empty data",
-                             dungeon: d,
-                             path: path ?? [],
-                             placements: placements))
+        #expect(!data.isEmpty, "PPM renderer returned empty data")
 
         let prefix = data.prefix(3)
         #expect(Array(prefix) == Array("P6\n".utf8))
@@ -106,11 +98,11 @@ import Testing
         }())
 
         guard let s = d.entrance, let t = d.exit else {
-            #expect(expectOrDump(false, "Expected entrance/exit to be present", dungeon: d))
+            #expect(Bool(false), "Expected entrance/exit to be present")
             return
         }
         let path = Pathfinder.shortestPath(in: d, from: s, to: t, movement: .init())
-        #expect(expectOrDump(path != nil, "Expected a path between entrance and exit", dungeon: d))
+        #expect(path != nil, "Expected a path between entrance and exit")
         let pathsOverlay: [[Point]] = path != nil ? [path!] : []
 
         let name = "DungeonGrid-\(d.grid.width)x\(d.grid.height)-seed\(d.seed)-path.png"

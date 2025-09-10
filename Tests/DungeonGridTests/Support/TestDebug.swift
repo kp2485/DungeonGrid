@@ -4,61 +4,59 @@
 //
 //  Created by Kyle Peterson on 8/25/25.
 //
-//  Helper to auto-dump ASCII (and optionally PPM) on failed expectations.
+//  Helper to auto-dump ASCII.
 //
 
 import Foundation
+import XCTest
 @testable import DungeonGrid
 
-/// Use inside `#expect(expectOrDump(...))`. If the condition is false,
-/// it prints an ASCII map to the test log, and (optionally) writes a PPM.
-///
-/// - Parameters:
-///   - condition: expression to evaluate
-///   - message: extra context line printed above the dump
-///   - d: the dungeon to visualize
-///   - path: optional tile path to highlight with '*'
-///   - placements: optional placements rendered as 'o' (or first letter of kind if annotateKinds)
-///   - annotateKinds: if true, placements use first letter of `kind` instead of 'o'
-///   - writePPM: set true to always write a PPM in /tmp; or set env `DUNGEON_WRITE_PPM=1`
-///   - ppmScale: pixels-per-tile for the PPM
-/// - Returns: the evaluated condition (suitable to pass to `#expect(...)`)
-@discardableResult
-func expectOrDump(_ condition: @autoclosure () -> Bool,
-                  _ message: String = "",
-                  dungeon d: Dungeon,
-                  path: [Point] = [],
-                  placements: [Placement] = [],
-                  annotateKinds: Bool = false,
-                  writePPM: Bool = false,
-                  ppmScale: Int = 4,
-                  file: StaticString = #file,
-                  line: UInt = #line) -> Bool {
+/// Lightweight debug helpers available to tests.
+/// Intentionally **no** `expectOrDump` here anymore.
+enum TestDebug {
 
-    let ok = condition()
-    if ok { return true }
+    /// ASCII render of the dungeon grid for quick visual debugging.
+    /// '#' = wall, '.' = floor, '+' = door (if your `Tile` enum has it), '?' = other.
+    static func ascii(_ d: Dungeon) -> String {
+        var s = ""
+        s.reserveCapacity((d.grid.width + 1) * d.grid.height)
 
-    // ASCII to stdout
-    if !message.isEmpty {
-        print("❌ \(message)")
+        for y in 0..<d.grid.height {
+            for x in 0..<d.grid.width {
+                let t = d.grid[x, y]   // unlabeled subscript (x, y)
+                switch t {
+                case .wall:  s.append("#")
+                case .floor: s.append(".")
+                case .door:  s.append("+")
+                default:     s.append("?")
+                }
+            }
+            s.append("\n")
+        }
+        return s
     }
-    let ascii = DungeonDebug.dumpASCII(d, placements: placements, path: path, annotateKinds: annotateKinds)
-    print(ascii)
 
-    // Optional PPM snapshot to /tmp (opt-in)
-    let envWantsPPM = ProcessInfo.processInfo.environment["DUNGEON_WRITE_PPM"] == "1"
-    if writePPM || envWantsPPM {
-        let data = LocksPPMRenderer.render(d, options: .init())
-        let ts = Int(Date().timeIntervalSince1970)
-        let url = URL(fileURLWithPath: NSTemporaryDirectory())
-            .appendingPathComponent("dungeon_debug_\(ts).ppm")
-        if (try? data.write(to: url)) != nil {
-            print("🖼  Wrote PPM to \(url.path)")
-        } else {
-            print("⚠️  Failed to write PPM")
+    /// Print an ASCII map to the test log.
+    static func print(_ d: Dungeon, file: StaticString = #filePath, line: UInt = #line) {
+        Swift.print(ascii(d))
+    }
+
+    /// If you still want a one-liner that asserts and dumps the map,
+    /// call this explicitly from tests (kept generic and descriptive).
+    static func assertTrueOrDump(
+        _ condition: @autoclosure () -> Bool,
+        _ message: @autoclosure () -> String = "",
+        dungeon: Dungeon? = nil,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        if !condition() {
+            if let d = dungeon {
+                Swift.print("---- Dungeon ASCII ----")
+                Swift.print(ascii(d))
+                Swift.print("-----------------------")
+            }
+            XCTFail(message(), file: file, line: line)
         }
     }
-
-    // Return false so `#expect(expectOrDump(...))` fails as intended.
-    return false
 }

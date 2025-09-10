@@ -96,16 +96,23 @@ import Testing
         )
 
         let items = [ogre, treasure, gobA, gobB]
-        let byID = Dictionary(uniqueKeysWithValues: items.map { ($0.id, $0) })
+
+        // Map item IDs (if String) → item
+        let byID: [String: AnyPlaceable] = Dictionary(uniqueKeysWithValues:
+            items.compactMap { it in
+                guard let sid = it.id as? String else { return nil }
+                return (sid, it)
+            }
+        )
 
         let res = ExternalPlacer.place(in: d, index: index, themes: nil, seed: d.seed, items: items)
 
-        // Expect all items to be placed
+        // Expect all items to be placed (only for those with String IDs)
         let idsPlaced = Set(res.placements.map(\.id))
         for it in items {
-            #expect(expectOrDump(idsPlaced.contains(it.id),
-                                 "Item \(it.id) failed to place",
-                                 dungeon: d))
+            if let sid = it.id as? String {
+                #expect(idsPlaced.contains(sid), "Item \(sid) failed to place")
+            }
         }
 
         // Build an occupancy map from the placements and asserted footprints
@@ -115,29 +122,23 @@ import Testing
 
         for p in res.placements {
             guard let it = byID[p.id] else {
-                #expect(expectOrDump(false, "Missing item for placement \(p.id)", dungeon: d))
+                #expect(false, "Missing item for placement \(p.id)")
                 continue
             }
             let tiles = footprintTiles(anchor: p.position, footprint: it.footprint)
 
             // All tiles must be passable and (optionally) non-door
             for t in tiles {
-                #expect(expectOrDump(d.grid[t.x, t.y].isPassable,
-                                     "Footprint covers non-passable tile at \(t) for \(p.id)",
-                                     dungeon: d))
+                #expect(d.grid[t.x, t.y].isPassable, "Footprint covers non-passable tile at \(t) for \(p.id)")
                 if it.policy.excludeDoorTiles {
-                    #expect(expectOrDump(d.grid[t.x, t.y] != .door,
-                                         "Footprint covers door tile at \(t) for \(p.id)",
-                                         dungeon: d))
+                    #expect(d.grid[t.x, t.y] != .door, "Footprint covers door tile at \(t) for \(p.id)")
                 }
             }
 
             // No overlaps across items
             for t in tiles {
                 let li = idx(t)
-                #expect(expectOrDump(!seen.contains(li),
-                                     "Footprint overlap detected at \(t) for \(p.id)",
-                                     dungeon: d))
+                #expect(!seen.contains(li), "Footprint overlap detected at \(t) for \(p.id)")
                 seen.insert(li)
             }
         }
@@ -167,7 +168,7 @@ import Testing
             }
             let group = PlacementGroup(
                 id: "gob-squad-A",
-                memberIDs: goblins.map(\.id),
+                memberIDs: goblins.map(\.id), // [AnyHashable] in API
                 maxAnchorDistance: 6,
                 minAnchorDistance: 1,
                 sameRegion: true,
@@ -180,34 +181,28 @@ import Testing
             // Determinism
             #expect(res1 == res2)
 
-            // All placed
+            // All placed (convert AnyHashable → String for lookups)
             let pmap = Dictionary(uniqueKeysWithValues: res1.placements.map { ($0.id, $0) })
             for it in goblins {
-                #expect(expectOrDump(pmap[it.id] != nil,
-                                     "Group member \(it.id) not placed",
-                                     dungeon: d))
+                if let sid = it.id as? String {
+                    #expect(pmap[sid] != nil, "Group member \(sid) not placed")
+                }
             }
 
             // Same region + distance constraints
-            let ps = goblins.compactMap { pmap[$0.id] }
+            let ps = goblins.compactMap { ($0.id as? String).flatMap { pmap[$0] } }
             guard ps.count == goblins.count else { return }
 
             if let r0 = ps.first?.region {
-                for p in ps { #expect(expectOrDump(p.region == r0,
-                                                   "Group member \(p.id) not in same region as others",
-                                                   dungeon: d)) }
+                for p in ps { #expect(p.region == r0, "Group member \(p.id) not in same region as others") }
             }
 
             for i in 0..<ps.count {
                 for j in (i+1)..<ps.count {
                     let a = ps[i].position, b = ps[j].position
                     let m = abs(a.x - b.x) + abs(a.y - b.y)
-                    #expect(expectOrDump(m >= 1,
-                                         "Group members at identical anchors",
-                                         dungeon: d))
-                    #expect(expectOrDump(m <= 6,
-                                         "Group members too far apart (m=\(m) > 6)",
-                                         dungeon: d))
+                    #expect(m >= 1, "Group members at identical anchors")
+                    #expect(m <= 6, "Group members too far apart (m=\(m) > 6)")
                 }
             }
         }

@@ -25,25 +25,19 @@ import Testing
             let g = index.graph
 
             guard let a = d.entrance, let b = d.exit else {
-                #expect(expectOrDump(false,
-                                     "Expected entrance/exit to exist (seed \(worldSeed))",
-                                     dungeon: d))
+                #expect(Bool(false), "Expected entrance/exit to exist (seed \(worldSeed))")
                 continue
             }
             guard
                 let rs = Regions.regionID(at: a, labels: index.labels, width: index.width),
                 let rt = Regions.regionID(at: b, labels: index.labels, width: index.width)
             else {
-                #expect(expectOrDump(false,
-                                     "Entrance/exit not in labeled regions (seed \(worldSeed))",
-                                     dungeon: d))
+                #expect(Bool(false), "Entrance/exit not in labeled regions (seed \(worldSeed))")
                 continue
             }
 
             let route = RegionRouting.route(g, from: rs, to: rt, doorBias: 0)
-            #expect(expectOrDump(route != nil,
-                                 "Expected region route between entrance and exit (seed \(worldSeed))",
-                                 dungeon: d))
+            #expect(route != nil, "Expected region route between entrance and exit (seed \(worldSeed))")
         }
     }
 
@@ -80,9 +74,7 @@ import Testing
                     foundLocked = true
                 }
             }
-            #expect(expectOrDump(foundLocked,
-                                 "No EdgeType.locked edges found despite non-empty locks plan",
-                                 dungeon: d2))
+            #expect(foundLocked, "No EdgeType.locked edges found despite non-empty locks plan")
         }
     }
 }

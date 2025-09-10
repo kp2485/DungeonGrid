@@ -31,16 +31,45 @@ import Testing
     func neighbors(_ d: Dungeon, _ x: Int, _ y: Int) -> [(Int, Int)] {
         let g = d.grid, e = d.edges, w = g.width, h = g.height
         var out: [(Int, Int)] = []
-        if x > 0               && g[x-1,y].isPassable && e.canStep(from: x, y, to: x-1, y) { out.append((x-1,y)) }
-        if x + 1 < w           && g[x+1,y].isPassable && e.canStep(from: x, y, to: x+1, y) { out.append((x+1,y)) }
-        if y > 0               && g[x,y-1].isPassable && e.canStep(from: x, y, to: x, y-1) { out.append((x,y-1)) }
-        if y + 1 < h           && g[x,y+1].isPassable && e.canStep(from: x, y, to: x, y+1) { out.append((x,y+1)) }
+
+        // Left: (x-1, y) via vertical edge at (vx: x, vy: y)
+        if x > 0,
+           g[x-1, y].isPassable
+        {
+            let edge = e[vx: x, vy: y]
+            if edge == .open || edge == .door { out.append((x-1, y)) }
+        }
+
+        // Right: (x+1, y) via vertical edge at (vx: x+1, vy: y)
+        if x + 1 < w,
+           g[x+1, y].isPassable
+        {
+            let edge = e[vx: x+1, vy: y]
+            if edge == .open || edge == .door { out.append((x+1, y)) }
+        }
+
+        // Up: (x, y-1) via horizontal edge at (hx: x, hy: y)
+        if y > 0,
+           g[x, y-1].isPassable
+        {
+            let edge = e[hx: x, hy: y]
+            if edge == .open || edge == .door { out.append((x, y-1)) }
+        }
+
+        // Down: (x, y+1) via horizontal edge at (hx: x, hy: y+1)
+        if y + 1 < h,
+           g[x, y+1].isPassable
+        {
+            let edge = e[hx: x, hy: y+1]
+            if edge == .open || edge == .door { out.append((x, y+1)) }
+        }
+
         return out
     }
 
     func bfs(_ d: Dungeon, from s: Point, to t: Point) -> (dist: [Int], prev: [Int]) {
-        let w = d.grid.width, h = d.grid.height, N = w*h
-        @inline(__always) func idx(_ p: Point) -> Int { p.y*w + p.x }
+        let w = d.grid.width, h = d.grid.height, N = w * h
+        @inline(__always) func idx(_ p: Point) -> Int { p.y * w + p.x }
 
         var dist = Array(repeating: -1, count: N)
         var prev = Array(repeating: -1, count: N)
@@ -55,7 +84,7 @@ import Testing
             let x = cur % w, y = cur / w
             if cur == idx(t) { break }
             for (nx, ny) in neighbors(d, x, y) {
-                let ni = ny*w + nx
+                let ni = ny * w + nx
                 if dist[ni] == -1 {
                     dist[ni] = dist[cur] + 1
                     prev[ni] = cur
@@ -67,7 +96,7 @@ import Testing
     }
 
     func pathFromPrev(_ prev: [Int], _ w: Int, _ s: Point, _ t: Point) -> [Point] {
-        @inline(__always) func idx(_ p: Point) -> Int { p.y*w + p.x }
+        @inline(__always) func idx(_ p: Point) -> Int { p.y * w + p.x }
         var out: [Point] = []
         var cur = idx(t)
         if prev[cur] == -1 { return [] }
@@ -97,33 +126,31 @@ import Testing
                 // Collect passable points (cap to keep runtime bounded)
                 var pts: [Point] = []
                 for _ in 0..<500 {
-                    let x = rng.int(in: 0...(d.grid.width-1))
-                    let y = rng.int(in: 0...(d.grid.height-1))
-                    if d.grid[x,y].isPassable { pts.append(Point(x,y)) }
+                    let x = rng.int(in: 0...(d.grid.width - 1))
+                    let y = rng.int(in: 0...(d.grid.height - 1))
+                    if d.grid[x, y].isPassable { pts.append(Point(x, y)) }
                     if pts.count >= 60 { break }
                 }
                 if pts.count < 2 { continue }
 
                 // Check N random pairs (tuned by TestEnv)
                 for _ in 0..<pairCount {
-                    let a = pts[rng.int(in: 0...(pts.count-1))]
-                    let b = pts[rng.int(in: 0...(pts.count-1))]
+                    let a = pts[rng.int(in: 0...(pts.count - 1))]
+                    let b = pts[rng.int(in: 0...(pts.count - 1))]
                     if a == b { continue }
 
                     let (dist, prev) = bfs(d, from: a, to: b)
                     let w = d.grid.width
-                    let bfsi = dist[b.y*w + b.x]
+                    let bfsi = dist[b.y * w + b.x]
 
                     let path = Pathfinder.shortestPath(in: d, from: a, to: b, movement: .init())
 
                     if bfsi < 0 {
-                        #expect(expectOrDump(path == nil,
-                                             "A* found a path where BFS says unreachable (from \(a) to \(b))",
-                                             dungeon: d))
+                        // Unreachable by BFS → A* must also fail
+                        #expect(path == nil, "A* found a path where BFS says unreachable (from \(a) to \(b))")
                     } else {
-                        #expect(expectOrDump(path != nil,
-                                             "A* failed to find a path (BFS says reachable) (from \(a) to \(b))",
-                                             dungeon: d))
+                        // Reachable by BFS → A* must succeed and match distance
+                        #expect(path != nil, "A* failed to find a path (BFS says reachable) (from \(a) to \(b))")
                         if let p = path {
                             var ok = true
                             for i in 1..<p.count {
@@ -131,16 +158,11 @@ import Testing
                                 if dx + dy != 1 { ok = false; break }
                                 if !d.grid[p[i].x, p[i].y].isPassable { ok = false; break }
                             }
-                            #expect(expectOrDump(ok,
-                                                 "A* path contains invalid steps or non-passable tiles (from \(a) to \(b))",
-                                                 dungeon: d,
-                                                 path: p))
+                            #expect(ok, "A* path contains invalid steps or non-passable tiles (from \(a) to \(b))")
 
                             let bfsPath = pathFromPrev(prev, w, a, b)
-                            #expect(expectOrDump(p.count == bfsPath.count,
-                                                 "A* path length \(p.count) != BFS length \(bfsPath.count) (from \(a) to \(b))",
-                                                 dungeon: d,
-                                                 path: p))
+                            #expect(p.count == bfsPath.count,
+                                    "A* path length \(p.count) != BFS length \(bfsPath.count) (from \(a) to \(b))")
                         }
                     }
                 }

@@ -45,27 +45,15 @@ import Testing
 
             let plan1 = ContentPlanner.planAll(in: d, graph: g, themes: assignment, seed: 777, specs: specs)
             let plan2 = ContentPlanner.planAll(in: d, graph: g, themes: assignment, seed: 777, specs: specs)
-            #expect(expectOrDump(plan1 == plan2,
-                                 "ContentPlanner determinism failed for worldSeed \(worldSeed)",
-                                 dungeon: d,
-                                 placements: plan1.placements))
+            #expect(plan1 == plan2, "ContentPlanner determinism failed for worldSeed \(worldSeed)")
 
             let (labels, _, w, _) = Regions.labelCells(d)
             for p in plan1.placements {
                 let rid = labels[p.position.y * w + p.position.x]
-                #expect(expectOrDump(rid != nil,
-                                     "Placement at \(p.position) not labeled (seed \(worldSeed))",
-                                     dungeon: d,
-                                     placements: plan1.placements))
+                #expect(rid != nil, "Placement at \(p.position) not labeled (seed \(worldSeed))")
                 let th = rid.flatMap { assignment.regionToTheme[$0] }
-                #expect(expectOrDump(th?.name == "treasure",
-                                     "Non-treasure placement at \(p.position) (seed \(worldSeed))",
-                                     dungeon: d,
-                                     placements: plan1.placements))
-                #expect(expectOrDump(p.kind == "loot.treasure",
-                                     "Wrong kind at \(p.position): \(p.kind) (seed \(worldSeed))",
-                                     dungeon: d,
-                                     placements: plan1.placements))
+                #expect(th?.name == "treasure", "Non-treasure placement at \(p.position) (seed \(worldSeed))")
+                #expect(p.kind == "loot.treasure", "Wrong kind at \(p.position): \(p.kind) (seed \(worldSeed))")
             }
         }
     }
@@ -106,10 +94,7 @@ import Testing
         var seen = Set<Int>()
         for p in plan.placements {
             let li = p.position.y * d.grid.width + p.position.x
-            #expect(expectOrDump(!seen.contains(li),
-                                 "Overlapping placement at \(p.position)",
-                                 dungeon: d,
-                                 placements: plan.placements))
+            #expect(!seen.contains(li), "Overlapping placement at \(p.position)")
             seen.insert(li)
         }
     }
