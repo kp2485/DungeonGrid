@@ -50,6 +50,9 @@ struct BSPGenerator {
         // Carve rooms
         for r in rooms { carveRoom(r.rect, in: &grid) }
 
+        // Add closets attached to some rooms
+        addClosets(to: &rooms, nextID: &nextID, grid: &grid, rng: &rng)
+
         if options.keepOuterBorder { keepOuterWalls(in: &grid) }
 
         // Build edge layer (truth for walls/doors)
@@ -121,7 +124,7 @@ struct BSPGenerator {
             let rect = Rect(x: rx, y: ry, width: rw, height: rh)
 
             node.room = rect
-            rooms.append(Room(id: nextID, rect: rect))
+            rooms.append(Room(id: nextID, rect: rect, type: .normal))
             nextID += 1
         } else {
             if let l = node.left { createRooms(node: l, rooms: &rooms, nextID: &nextID, rng: &rng) }
@@ -174,5 +177,87 @@ struct BSPGenerator {
             grid[0, y] = .wall
             grid[grid.width - 1, y] = .wall
         }
+    }
+
+    private func addClosets(to rooms: inout [Room], nextID: inout Int, grid: inout Grid, rng: inout SplitMix64) {
+        
+        // Try to add 0-2 closets per room, with decreasing probability
+        for room in rooms where room.type == .normal {
+            let closetCount = rng.int(in: 0...2)
+            for _ in 0..<closetCount {
+                // Find a wall adjacent to this room where we can place a 1x1 closet
+                let candidates = findClosetLocations(for: room, grid: grid)
+                if let location = candidates.randomElement(using: &rng) {
+                    let closetRect = Rect(x: location.x, y: location.y, width: 1, height: 1)
+                    rooms.append(Room(id: nextID, rect: closetRect, type: .closet))
+                    nextID += 1
+                    grid[location.x, location.y] = .floor
+                }
+            }
+        }
+    }
+    
+    private func findClosetLocations(for room: Room, grid: Grid) -> [Point] {
+        var candidates: [Point] = []
+        let w = grid.width, h = grid.height
+        
+        // Check walls adjacent to room perimeter
+        for y in room.minY...room.maxY {
+            // Left side
+            if room.minX > 0 {
+                let x = room.minX - 1
+                if grid[x, y] == .wall && isValidClosetLocation(x: x, y: y, grid: grid) {
+                    candidates.append(Point(x, y))
+                }
+            }
+            // Right side
+            if room.maxX + 1 < w {
+                let x = room.maxX + 1
+                if grid[x, y] == .wall && isValidClosetLocation(x: x, y: y, grid: grid) {
+                    candidates.append(Point(x, y))
+                }
+            }
+        }
+        
+        for x in room.minX...room.maxX {
+            // Top side
+            if room.minY > 0 {
+                let y = room.minY - 1
+                if grid[x, y] == .wall && isValidClosetLocation(x: x, y: y, grid: grid) {
+                    candidates.append(Point(x, y))
+                }
+            }
+            // Bottom side
+            if room.maxY + 1 < h {
+                let y = room.maxY + 1
+                if grid[x, y] == .wall && isValidClosetLocation(x: x, y: y, grid: grid) {
+                    candidates.append(Point(x, y))
+                }
+            }
+        }
+        
+        return candidates
+    }
+    
+    private func isValidClosetLocation(x: Int, y: Int, grid: Grid) -> Bool {
+        let w = grid.width, h = grid.height
+        
+        // Must be on the grid
+        guard x >= 0 && x < w && y >= 0 && y < h else { return false }
+        
+        // Must be a wall
+        guard grid[x, y] == .wall else { return false }
+        
+        // Check that all 8 neighbors are walls (ensures it's a true closet)
+        for dy in -1...1 {
+            for dx in -1...1 {
+                let nx = x + dx, ny = y + dy
+                if nx >= 0 && nx < w && ny >= 0 && ny < h {
+                    if grid[nx, ny] != .wall { return false }
+                }
+            }
+        }
+        
+        return true
     }
 }

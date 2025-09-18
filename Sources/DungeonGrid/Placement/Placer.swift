@@ -42,6 +42,13 @@ public enum Placer {
             case .corridorsOnly:
                 guard let rid = rid, let kind = kinds[rid] else { return false }
                 if case .corridor = kind { return true } else { return false }
+            case .closetsOnly:
+                guard let rid = rid, let kind = kinds[rid] else { return false }
+                if case .room(let roomID) = kind {
+                    // Check if this room is a closet
+                    return d.rooms.contains { $0.id == roomID && $0.type == .closet }
+                }
+                return false
             case .junctions(let minDeg):
                 guard let rid = rid, let ns = nodeStats[rid] else { return false }
                 return ns.degree >= minDeg

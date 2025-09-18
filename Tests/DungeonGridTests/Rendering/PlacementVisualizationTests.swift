@@ -216,4 +216,15 @@ import Testing
             }
         }
     }
+
+    @Test("Region Class: Closets")
+    func regionClassClosets() throws {
+        let cfg = DungeonConfig(width: 25, height: 15, algorithm: .bsp(BSPOptions()), ensureConnected: true, placeDoorsAndTags: true)
+        let d = DungeonGrid.generate(config: cfg, seed: 100)
+        var pol = PlacementPolicy(count: 5, regionClass: .closetsOnly)
+        let placements = Placer.plan(in: d, seed: 1, kind: "K", policy: pol)
+        let ascii = DungeonDebug.dumpASCII(d, placements: placements, annotateKinds: true)
+        print("\nCloset rooms (K = key/loot):\n\(ascii)")
+        #expect(!placements.isEmpty)
+    }
 }

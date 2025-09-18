@@ -65,6 +65,7 @@ public enum DungeonJSON {
         public let y: Int
         public let width: Int
         public let height: Int
+        public let type: String
     }
 
     // MARK: - Encode
@@ -77,7 +78,7 @@ public enum DungeonJSON {
         let edgesHB64 = EdgeCodec.packBase64(d.edges.h)
         let edgesVB64 = EdgeCodec.packBase64(d.edges.v)
 
-        let rooms = d.rooms.map { RoomSnap(id: $0.id, x: $0.rect.x, y: $0.rect.y, width: $0.rect.width, height: $0.rect.height) }
+        let rooms = d.rooms.map { RoomSnap(id: $0.id, x: $0.rect.x, y: $0.rect.y, width: $0.rect.width, height: $0.rect.height, type: $0.type == .closet ? "closet" : "normal") }
         let entrance = d.entrance.map { [$0.x, $0.y] }
         let exit = d.exit.map { [$0.x, $0.y] }
         let doorTiles = d.doors.map { [$0.x, $0.y] }
@@ -98,7 +99,7 @@ public enum DungeonJSON {
         let tilesB64 = TileCodec.packBase64(d.grid.tiles)
         let edgesHB64 = EdgeCodec.packBase64(d.edges.h)
         let edgesVB64 = EdgeCodec.packBase64(d.edges.v)
-        let rooms = d.rooms.map { RoomSnap(id: $0.id, x: $0.rect.x, y: $0.rect.y, width: $0.rect.width, height: $0.rect.height) }
+        let rooms = d.rooms.map { RoomSnap(id: $0.id, x: $0.rect.x, y: $0.rect.y, width: $0.rect.width, height: $0.rect.height, type: $0.type == .closet ? "closet" : "normal") }
         let entrance = d.entrance.map { [$0.x, $0.y] }
         let exit = d.exit.map { [$0.x, $0.y] }
         let doorTiles = d.doors.map { [$0.x, $0.y] }
@@ -199,7 +200,8 @@ public enum DungeonJSON {
                     codingPath: [], debugDescription: "Duplicate room id: \(snap.id)"
                 ))
             }
-            return Room(id: snap.id, rect: Rect(x: snap.x, y: snap.y, width: snap.width, height: snap.height))
+            let roomType: RoomType = snap.type == "closet" ? .closet : .normal
+            return Room(id: snap.id, rect: Rect(x: snap.x, y: snap.y, width: snap.width, height: snap.height), type: roomType)
         }
 
         // Optional points (validate bounds when present)

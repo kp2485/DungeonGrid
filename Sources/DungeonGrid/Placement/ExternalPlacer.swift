@@ -100,6 +100,12 @@ public enum ExternalPlacer {
                 return isRoomRegion(rid)
             case .corridorsOnly:
                 return !isRoomRegion(rid)
+            case .closetsOnly:
+                guard let rid = rid, let kind = kindsByID[rid] else { return false }
+                if case .room(let roomID) = kind {
+                    return d.rooms.contains { $0.id == roomID && $0.type == .closet }
+                }
+                return false
             case .any:
                 return true
             case .junctions(let minDegree):

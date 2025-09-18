@@ -31,7 +31,7 @@ public struct UniformRoomsGenerator {
             let ry = rng.int(in: 1...(max(1, height - rh - 2)))
             let rect = Rect(x: rx, y: ry, width: rw, height: rh)
             if rooms.allSatisfy({ !intersects($0.rect, rect, sep: options.separation) }) {
-                rooms.append(Room(id: nextID, rect: rect)); nextID += 1
+                rooms.append(Room(id: nextID, rect: rect, type: .normal)); nextID += 1
                 for y in rect.minY...rect.maxY { for x in rect.minX...rect.maxX { grid[x, y] = .floor } }
             }
         }
@@ -43,7 +43,7 @@ public struct UniformRoomsGenerator {
             let cx = rng.int(in: rw/2...(width  - rw/2 - 1))
             let cy = rng.int(in: rh/2...(height - rh/2 - 1))
             let rect = Rect(x: max(1, cx - rw/2), y: max(1, cy - rh/2), width: rw, height: rh)
-            rooms.append(Room(id: nextID, rect: rect)); nextID += 1
+            rooms.append(Room(id: nextID, rect: rect, type: .normal)); nextID += 1
             for y in rect.minY...rect.maxY { for x in rect.minX...rect.maxX { grid[x, y] = .floor } }
         }
 

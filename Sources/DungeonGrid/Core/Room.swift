@@ -11,5 +11,14 @@ import Foundation
 public struct Room: Sendable, Equatable {
     public let id: Int
     public let rect: Rect
-    public init(id: Int, rect: Rect) { self.id = id; self.rect = rect }
+    public let type: RoomType
+    
+    public init(id: Int, rect: Rect, type: RoomType = .normal) { 
+        self.id = id; self.rect = rect; self.type = type 
+    }
+}
+
+public enum RoomType: Sendable, Equatable {
+    case normal
+    case closet
 }

@@ -109,6 +109,9 @@ public enum ContentPlanner {
                         case .corridorsOnly:
                             guard let rid, case .corridor = kinds[rid] else { return false }
                             return true
+                        case .closetsOnly:
+                            guard let rid, case .room(let roomID) = kinds[rid] else { return false }
+                            return d.rooms.contains { $0.id == roomID && $0.type == .closet }
                         case .junctions(let minDeg):
                             guard let rid, let ns = nodeStats[rid] else { return false }
                             return ns.degree >= minDeg

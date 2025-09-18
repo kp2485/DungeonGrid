@@ -13,6 +13,7 @@ public struct PlacementPolicy: Sendable, Equatable {
     public enum RegionClass: Sendable, Equatable {
         case roomsOnly
         case corridorsOnly
+        case closetsOnly
         case any
         // New richer selectors (evaluated via RegionStats/kinds):
         case junctions(minDegree: Int = 3)
