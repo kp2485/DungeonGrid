@@ -8,7 +8,7 @@
 //
 
 import Foundation
-import XCTest
+import Testing
 @testable import DungeonGrid
 
 /// Lightweight debug helpers available to tests.
@@ -56,7 +56,7 @@ enum TestDebug {
                 Swift.print(ascii(d))
                 Swift.print("-----------------------")
             }
-            XCTFail(message(), file: file, line: line)
+            #expect(Bool(false), "\(message())", sourceLocation: SourceLocation(fileID: file, line: line))
         }
     }
 }

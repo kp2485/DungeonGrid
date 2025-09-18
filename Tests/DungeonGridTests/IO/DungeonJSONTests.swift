@@ -28,7 +28,7 @@ import Testing
         }
         var rooms = (json["rooms"] as? [[String: Any]]) ?? []
         if rooms.count >= 1 {
-            var dup = rooms[0]
+            let dup = rooms[0]
             rooms.append(dup) // duplicate id
             json["rooms"] = rooms
         }

@@ -7,12 +7,14 @@ let package = Package(
     products: [
         .library(name: "DungeonGrid", targets: ["DungeonGrid"])
     ],
-    dependencies: [ ],
+    dependencies: [
+        .package(url: "https://github.com/apple/swift-testing.git", from: "0.8.0")
+    ],
     targets: [
         .target(name: "DungeonGrid"),
         .testTarget(
             name: "DungeonGridTests",
-            dependencies: ["DungeonGrid"]
+            dependencies: ["DungeonGrid", .product(name: "Testing", package: "swift-testing")]
         )
     ]
 )
