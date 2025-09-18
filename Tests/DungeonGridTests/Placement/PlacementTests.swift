@@ -123,4 +123,20 @@ import Testing
                     "Placement visible from entrance at \(p.position)")
         }
     }
+
+    @Test("Placement respects region area and door-edge avoidance")
+    func placementRegionConstraints() {
+        let cfg = DungeonConfig(width: 61, height: 39, algorithm: .bsp(BSPOptions()), ensureConnected: true, placeDoorsAndTags: true)
+        let d = DungeonGrid.generate(config: cfg, seed: 2024)
+        let idx = DungeonIndex(d)
+        let pol = PlacementPolicy(
+            count: 15,
+            regionClass: .corridorsOnly,
+            corridorAreaMin: 6,
+            regionDegreeMax: 2,
+            avoidNearDoorEdgesRadius: 1
+        )
+        let placements = Placer.plan(in: d, index: idx, seed: 99, kind: "enemy", policy: pol)
+        #expect(placements.count <= 15)
+    }
 }

@@ -26,6 +26,7 @@ public enum Placer {
         let w = d.grid.width, h = d.grid.height
         let labels = index.labels
         let kinds  = index.kinds
+        let graph  = index.graph
 
         // Collect candidate tiles
         var candidates: [Point] = []
@@ -42,6 +43,10 @@ public enum Placer {
                 if case .corridor = kind { return true } else { return false }
             }
         }
+        
+        // Precompute region stats for constraints
+        let stats = RegionAnalysis.computeStats(dungeon: d, graph: graph)
+        let nodeStats = stats.nodes
 
         for y in 0..<h {
             for x in 0..<w {
@@ -50,14 +55,39 @@ public enum Placer {
                 if policy.excludeDoorTiles && t == .door { continue }
                 let rid = labels[y * w + x]
                 if !regionClassOK(rid) { continue }
+                // Region-based filters
+                if let rid = rid, let ns = nodeStats[rid] {
+                    // Overall area min/max
+                    if let amin = policy.regionAreaMin, ns.area < amin { continue }
+                    if let amax = policy.regionAreaMax, ns.area > amax { continue }
+                    // Per-kind area constraints
+                    if let kind = kinds[rid] {
+                        switch kind {
+                        case .room:
+                            if let rmin = policy.roomAreaMin, ns.area < rmin { continue }
+                            if let rmax = policy.roomAreaMax, ns.area > rmax { continue }
+                        case .corridor:
+                            if let cmin = policy.corridorAreaMin, ns.area < cmin { continue }
+                            if let cmax = policy.corridorAreaMax, ns.area > cmax { continue }
+                            if policy.requireDeadEnd && ns.isDeadEnd == false { continue }
+                        }
+                    }
+                    // Degree constraints
+                    if let dmin = policy.regionDegreeMin, ns.degree < dmin { continue }
+                    if let dmax = policy.regionDegreeMax, ns.degree > dmax { continue }
+                }
                 candidates.append(Point(x, y))
             }
         }
 
         // Optional distance constraint (edge-aware BFS from entrance)
-        var dist: [Int]? = nil
-        if let s = d.entrance, policy.minDistanceFromEntrance != nil {
-            dist = edgeBFS(from: s, grid: d.grid, edges: d.edges)
+        var distFromEntrance: [Int]? = nil
+        var distFromExit: [Int]? = nil
+        if let s = d.entrance, (policy.minDistanceFromEntrance != nil || policy.maxDistanceFromEntrance != nil) {
+            distFromEntrance = edgeBFS(from: s, grid: d.grid, edges: d.edges)
+        }
+        if let t = d.exit, (policy.minDistanceFromExit != nil || policy.maxDistanceFromExit != nil) {
+            distFromExit = edgeBFS(from: t, grid: d.grid, edges: d.edges)
         }
 
         // Optional LOS avoidance from entrance
@@ -65,16 +95,63 @@ public enum Placer {
                                          diagonalThroughCorners: false)
 
         // Filter candidates by constraints
+        // Optional door-edge avoidance: build a quick mask of tiles within radius of any door edge
+        var avoidMask: [Bool]? = nil
+        if policy.avoidNearDoorEdgesRadius > 0 {
+            avoidMask = Array(repeating: false, count: w*h)
+            let R = policy.avoidNearDoorEdgesRadius
+            // Vertical door edges at seam x in 1..W-1, between (x-1,y) and (x,y)
+            for y in 0..<h {
+                for vx in 1..<w where d.edges[vx: vx, vy: y] == .door {
+                    // mark tiles in manhattan radius around (vx-1,y) and (vx,y)
+                    for dy in -R...R {
+                        for dx in -R...R where abs(dx) + abs(dy) <= R {
+                            let p1x = vx-1+dx, p1y = y+dy
+                            let p2x = vx+dx,   p2y = y+dy
+                            if p1x>=0 && p1y>=0 && p1x<w && p1y<h { avoidMask![p1y*w + p1x] = true }
+                            if p2x>=0 && p2y>=0 && p2x<w && p2y<h { avoidMask![p2y*w + p2x] = true }
+                        }
+                    }
+                }
+            }
+            // Horizontal door edges at seam y in 1..H-1, between (x,y-1) and (x,y)
+            for hy in 1..<h {
+                for x in 0..<w where d.edges[hx: x, hy: hy] == .door {
+                    for dy in -R...R {
+                        for dx in -R...R where abs(dx) + abs(dy) <= R {
+                            let p1x = x+dx, p1y = hy-1+dy
+                            let p2x = x+dx, p2y = hy+dy
+                            if p1x>=0 && p1y>=0 && p1x<w && p1y<h { avoidMask![p1y*w + p1x] = true }
+                            if p2x>=0 && p2y>=0 && p2x<w && p2y<h { avoidMask![p2y*w + p2x] = true }
+                        }
+                    }
+                }
+            }
+        }
+
         let filtered: [Point] = candidates.filter { p in
-            if let mind = policy.minDistanceFromEntrance, let dist = dist {
+            if let mind = policy.minDistanceFromEntrance, let dist = distFromEntrance {
                 let di = dist[p.y * w + p.x]
                 if di < 0 || di < mind { return false }
+            }
+            if let maxd = policy.maxDistanceFromEntrance, let dist = distFromEntrance {
+                let di = dist[p.y * w + p.x]
+                if di < 0 || di > maxd { return false }
+            }
+            if let mind = policy.minDistanceFromExit, let dist = distFromExit {
+                let di = dist[p.y * w + p.x]
+                if di < 0 || di < mind { return false }
+            }
+            if let maxd = policy.maxDistanceFromExit, let dist = distFromExit {
+                let di = dist[p.y * w + p.x]
+                if di < 0 || di > maxd { return false }
             }
             if policy.avoidLOSFromEntrance, let s = d.entrance {
                 if Visibility.hasLineOfSight(in: d, from: s, to: p, policy: losPolicy) {
                     return false
                 }
             }
+            if let mask = avoidMask, mask[p.y * w + p.x] { return false }
             return true
         }
 
