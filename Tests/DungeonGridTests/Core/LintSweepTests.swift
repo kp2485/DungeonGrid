@@ -17,6 +17,7 @@ import Testing
         let cfgs: [DungeonConfig] = [
             .init(width: 41, height: 25, algorithm: .bsp(BSPOptions()), ensureConnected: true, placeDoorsAndTags: true),
             .init(width: 41, height: 25, algorithm: .maze(MazeOptions()), ensureConnected: true, placeDoorsAndTags: true),
+            .init(width: 41, height: 25, algorithm: .caves(CavesOptions()), ensureConnected: true, placeDoorsAndTags: true),
             .init(width: 41, height: 25, algorithm: .uniformRooms(UniformRoomsOptions()), ensureConnected: true, placeDoorsAndTags: true),
         ]
         let seeds: [UInt64] = TestEnv.fuzzSeeds

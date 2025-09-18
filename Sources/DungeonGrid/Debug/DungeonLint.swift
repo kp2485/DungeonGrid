@@ -64,6 +64,10 @@ public enum DungeonLint {
                 if !hasDoorTileAdjacentToDoorEdge(d, vertical: true, a: x, b: y) {
                     issues.append(.init("Vertical door edge (vx:\(x),vy:\(y)) has no adjacent door tile"))
                 }
+                // Door edges must separate passable tiles
+                if !bothTilesPassableForVertical(d, x: x, y: y) {
+                    issues.append(.init("Vertical door edge (vx:\(x),vy:\(y)) does not separate two passable tiles"))
+                }
             }
         }
         // Horizontal door edges: y in 1...h-1, x in 0...w-1
@@ -72,6 +76,9 @@ public enum DungeonLint {
                 if !hasDoorTileAdjacentToDoorEdge(d, vertical: false, a: x, b: y) {
                     issues.append(.init("Horizontal door edge (hx:\(x),hy:\(y)) has no adjacent door tile"))
                 }
+                if !bothTilesPassableForHorizontal(d, x: x, y: y) {
+                    issues.append(.init("Horizontal door edge (hx:\(x),hy:\(y)) does not separate two passable tiles"))
+                }
             }
         }
 
@@ -79,6 +86,29 @@ public enum DungeonLint {
         for p in d.doors {
             if p.x == 0 || p.y == 0 || p.x == d.grid.width - 1 || p.y == d.grid.height - 1 {
                 issues.append(.init("Door tile at border (\(p.x),\(p.y))"))
+            }
+        }
+
+        // 6) Locked edges should also separate passable tiles (locks gate paths, not walls)
+        for y in 0..<d.grid.height {
+            for x in 1..<d.grid.width where d.edges[vx: x, vy: y] == .locked {
+                if !bothTilesPassableForVertical(d, x: x, y: y) {
+                    issues.append(.init("Vertical locked edge (vx:\(x),vy:\(y)) does not separate two passable tiles"))
+                }
+            }
+        }
+        for x in 0..<d.grid.width {
+            for y in 1..<d.grid.height where d.edges[hx: x, hy: y] == .locked {
+                if !bothTilesPassableForHorizontal(d, x: x, y: y) {
+                    issues.append(.init("Horizontal locked edge (hx:\(x),hy:\(y)) does not separate two passable tiles"))
+                }
+            }
+        }
+
+        // 7) Door tiles must be encoded as .door in the grid (defensive)
+        for p in d.doors {
+            if d.grid[p.x, p.y] != .door {
+                issues.append(.init("Door list contains non-door tile at (\(p.x),\(p.y))"))
             }
         }
 
@@ -135,5 +165,21 @@ public enum DungeonLint {
             if y < g.height, g[x, y] == .door { return true }
             return false
         }
+    }
+
+    /// Both adjacent tiles around a vertical seam must be passable.
+    private static func bothTilesPassableForVertical(_ d: Dungeon, x: Int, y: Int) -> Bool {
+        if x <= 0 || x > d.grid.width - 1 { return false }
+        let l = d.grid[x-1, y]
+        let r = d.grid[x, y]
+        return l.isPassable && r.isPassable
+    }
+
+    /// Both adjacent tiles around a horizontal seam must be passable.
+    private static func bothTilesPassableForHorizontal(_ d: Dungeon, x: Int, y: Int) -> Bool {
+        if y <= 0 || y > d.grid.height - 1 { return false }
+        let t = d.grid[x, y-1]
+        let b = d.grid[x, y]
+        return t.isPassable && b.isPassable
     }
 }
