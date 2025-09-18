@@ -153,7 +153,7 @@ import Testing
         let snap = try dec.decode(DungeonJSON.Snapshot.self, from: data)
 
         // Create a room that is guaranteed OOB (x = width)
-        let badRoom = DungeonJSON.RoomSnap(id: 999, x: d.grid.width, y: 0, width: 3, height: 3)
+        let badRoom = DungeonJSON.RoomSnap(id: 999, x: d.grid.width, y: 0, width: 3, height: 3, type: "normal")
 
         var newRooms = snap.rooms
         if newRooms.isEmpty {
