@@ -193,8 +193,8 @@ import Testing
                 if let s = result.dungeon.entrance, s.x == x, s.y == y { ascii += "S" }
                 else if let e = result.dungeon.exit, e.x == x, e.y == y { ascii += "E" }
                 // Placements
-                else if result.placements["key"]?.contains({ $0.position.x == x && $0.position.y == y }) == true { ascii += "K" }
-                else if result.placements["enemy"]?.contains({ $0.position.x == x && $0.position.y == y }) == true { ascii += "e" }
+                else if result.placements["key"]?.contains(where: { $0.position.x == x && $0.position.y == y }) == true { ascii += "K" }
+                else if result.placements["enemy"]?.contains(where: { $0.position.x == x && $0.position.y == y }) == true { ascii += "e" }
                 // Base terrain
                 else {
                     switch t {
@@ -240,7 +240,7 @@ import Testing
                 #expect(!placements.isEmpty)
             } else {
                 print("Still no closets - this is expected behavior (closets are optional)")
-                #expect(true) // Pass the test since closets are optional
+                #expect(Bool(true)) // Pass the test since closets are optional
             }
         } else {
             let pol = PlacementPolicy(count: 5, regionClass: .closetsOnly)
