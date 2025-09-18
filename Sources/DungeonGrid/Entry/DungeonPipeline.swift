@@ -29,20 +29,39 @@ public struct DungeonPipeline {
     private let base: Dungeon
     private let steps: [Step]
     private let names: [String]
+    private let captureMetrics: Bool
+    private let onStep: ((_ name: String, _ result: DungeonPipelineResult) -> Void)?
 
     public init(base: Dungeon) {
         self.base = base
         self.steps = []
         self.names = []
+        self.captureMetrics = true
+        self.onStep = nil
     }
 
-    private init(base: Dungeon, steps: [Step], names: [String]) {
+    private init(base: Dungeon, steps: [Step], names: [String], captureMetrics: Bool, onStep: ((_ name: String, _ result: DungeonPipelineResult) -> Void)?) {
         self.base = base
         self.steps = steps
         self.names = names
+        self.captureMetrics = captureMetrics
+        self.onStep = onStep
     }
 
     // MARK: - Builder
+
+    /// Return the list of step names accumulated so far.
+    public var stepNames: [String] { names }
+
+    /// Enable/disable metrics capture (durations, totals) in the result.
+    public func withMetrics(_ enabled: Bool) -> DungeonPipeline {
+        DungeonPipeline(base: base, steps: steps, names: names, captureMetrics: enabled, onStep: onStep)
+    }
+
+    /// Provide a callback invoked after each step with the step name and current result snapshot.
+    public func onStep(_ cb: @escaping (_ name: String, _ result: DungeonPipelineResult) -> Void) -> DungeonPipeline {
+        DungeonPipeline(base: base, steps: steps, names: names, captureMetrics: captureMetrics, onStep: cb)
+    }
 
     /// Ensure the dungeon is a single connected component (idempotent).
     public func ensureConnected(seed: UInt64) -> DungeonPipeline {
@@ -114,12 +133,15 @@ public struct DungeonPipeline {
         stepMetrics.reserveCapacity(steps.count)
 
         for (i, step) in steps.enumerated() {
+            let name = (i < names.count ? names[i] : "step[\(i)]")
             let t0 = DispatchTime.now().uptimeNanoseconds
             step(&out)
             let t1 = DispatchTime.now().uptimeNanoseconds
-            let ms = Double(t1 &- t0) / 1_000_000.0
-            let name = (i < names.count ? names[i] : "step[\(i)]")
-            stepMetrics.append(.init(name: name, durationMS: ms))
+            if captureMetrics {
+                let ms = Double(t1 &- t0) / 1_000_000.0
+                stepMetrics.append(.init(name: name, durationMS: ms))
+            }
+            if let cb = onStep { cb(name, out) }
         }
 
         // Totals from final dungeon
@@ -137,24 +159,26 @@ public struct DungeonPipeline {
         let doorV = d.edges.v.reduce(0) { $0 + ($1 == .door ? 1 : 0) }
         let byKind = out.placements.mapValues { $0.count }
 
-        out.metrics = DungeonPipelineMetrics(
-            steps: stepMetrics,
-            totals: .init(width: w,
-                          height: h,
-                          tilesWall: walls,
-                          tilesFloor: floors,
-                          tilesDoor: doorsT,
-                          doorEdgesH: doorH,
-                          doorEdgesV: doorV,
-                          rooms: d.rooms.count,
-                          placementsByKind: byKind)
-        )
+        if captureMetrics {
+            out.metrics = DungeonPipelineMetrics(
+                steps: stepMetrics,
+                totals: .init(width: w,
+                              height: h,
+                              tilesWall: walls,
+                              tilesFloor: floors,
+                              tilesDoor: doorsT,
+                              doorEdgesH: doorH,
+                              doorEdgesV: doorV,
+                              rooms: d.rooms.count,
+                              placementsByKind: byKind)
+            )
+        }
         return out
     }
 
     // MARK: - Internals
 
     private func addingNamed(_ name: String, _ s: @escaping Step) -> DungeonPipeline {
-        DungeonPipeline(base: base, steps: steps + [s], names: names + [name])
+        DungeonPipeline(base: base, steps: steps + [s], names: names + [name], captureMetrics: captureMetrics, onStep: onStep)
     }
 }

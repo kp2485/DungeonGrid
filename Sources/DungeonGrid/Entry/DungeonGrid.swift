@@ -60,7 +60,9 @@ public enum DungeonGrid {
         doorPolicy: DoorPolicy = .init(),
         locks: (maxLocks: Int, doorBias: Int)? = nil,
         themes: (rules: [ThemeRule], seedOffset: UInt64)? = nil,
-        requests: [PlacementRequest]
+        requests: [PlacementRequest],
+        onStep: ((_ name: String, _ result: DungeonPipelineResult) -> Void)? = nil,
+        captureMetrics: Bool = true
     ) -> DungeonPipelineResult {
         
         // 1) Base generation
@@ -82,6 +84,8 @@ public enum DungeonGrid {
         
         // 2) Compose pipeline
         var pipe = DungeonPipeline(base: base)
+            .withMetrics(captureMetrics)
+        if let cb = onStep { pipe = pipe.onStep(cb) }
         
         if (ensureConnected ?? config.ensureConnected) {
             pipe = pipe.ensureConnected(seed: SeedDeriver.derive(seed, "ensureConnected"))
