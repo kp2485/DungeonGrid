@@ -57,6 +57,8 @@ public enum ExternalPlacer {
         let doorSet: Set<Int> = Set(d.doors.map { li($0.x, $0.y) })
         let (labels, kindsByID, lw, _) = Regions.labelCells(d)
         precondition(lw == w, "label width mismatch")
+        let graph = index.graph
+        let nodeStats = RegionAnalysis.computeStats(dungeon: d, graph: graph).nodes
 
         // Theme lookup (optional)
         let themeByRegion: [RegionID: Theme] = themes?.regionToTheme ?? [:]
@@ -94,9 +96,34 @@ public enum ExternalPlacer {
         @inline(__always)
         func inRegionClass(_ rid: RegionID?, policy: PlacementPolicy) -> Bool {
             switch policy.regionClass {
-            case .roomsOnly:     return isRoomRegion(rid)
-            case .corridorsOnly: return !isRoomRegion(rid)
-            case .any:           return true
+            case .roomsOnly:
+                return isRoomRegion(rid)
+            case .corridorsOnly:
+                return !isRoomRegion(rid)
+            case .any:
+                return true
+            case .junctions(let minDegree):
+                guard let rid = rid, let ns = nodeStats[rid] else { return false }
+                return ns.degree >= minDegree
+            case .deadEnds:
+                guard let rid = rid, let ns = nodeStats[rid] else { return false }
+                return ns.isDeadEnd
+            case .farFromEntrance(let minHops):
+                guard let rid = rid, let ns = nodeStats[rid] else { return false }
+                let d = ns.distanceFromEntrance ?? Int.max
+                return d >= minHops
+            case .nearEntrance(let maxHops):
+                guard let rid = rid, let ns = nodeStats[rid] else { return false }
+                if let d = ns.distanceFromEntrance { return d <= maxHops } else { return false }
+            case .perimeter:
+                guard let rid = rid, let node = graph.nodes[rid] else { return false }
+                let r = node.bbox
+                return r.x == 0 || r.y == 0 || (r.x + r.width) == w || (r.y + r.height) == h
+            case .core:
+                guard let rid = rid, let node = graph.nodes[rid] else { return false }
+                let r = node.bbox
+                let touches = r.x == 0 || r.y == 0 || (r.x + r.width) == w || (r.y + r.height) == h
+                return !touches
             }
         }
 
