@@ -1,5 +1,78 @@
 //
 //  DungeonJSONTests.swift
+//  DungeonGridTests
+//
+
+import Foundation
+import Testing
+@testable import DungeonGrid
+
+@Suite struct DungeonJSONTests {
+
+    @Test("encodePretty produces stable, non-empty output")
+    func prettyEncode() {
+        let cfg = DungeonConfig(width: 31, height: 21, algorithm: .maze(MazeOptions()), ensureConnected: true, placeDoorsAndTags: true)
+        let d = DungeonGrid.generate(config: cfg, seed: 555)
+        let data = try? DungeonJSON.encodePretty(d)
+        #expect(data != nil && !(data!.isEmpty))
+    }
+
+    @Test("decode rejects duplicate room ids")
+    func duplicateRoomIds() {
+        // Build a minimal valid dungeon and snapshot, then inject duplicate room ids.
+        let cfg = DungeonConfig(width: 15, height: 11, algorithm: .uniformRooms(UniformRoomsOptions()), ensureConnected: true, placeDoorsAndTags: true)
+        let d = DungeonGrid.generate(config: cfg, seed: 42)
+        guard var json = try? JSONSerialization.jsonObject(with: DungeonJSON.encode(d)) as? [String: Any] else {
+            #expect(Bool(false), "Could not encode dungeon to JSON object")
+            return
+        }
+        var rooms = (json["rooms"] as? [[String: Any]]) ?? []
+        if rooms.count >= 1 {
+            var dup = rooms[0]
+            rooms.append(dup) // duplicate id
+            json["rooms"] = rooms
+        }
+        let data = try! JSONSerialization.data(withJSONObject: json, options: [.sortedKeys])
+        var threw = false
+        do { _ = try DungeonJSON.decode(data) } catch { threw = true }
+        #expect(threw, "Expected decode to fail on duplicate room ids")
+    }
+
+    @Test("decode rejects non-multiple-of-4 Base64 lengths")
+    func base64MultipleOf4() {
+        let cfg = DungeonConfig(width: 9, height: 9, algorithm: .maze(MazeOptions()), ensureConnected: true, placeDoorsAndTags: true)
+        let d = DungeonGrid.generate(config: cfg, seed: 7)
+        guard var json = try? JSONSerialization.jsonObject(with: DungeonJSON.encode(d)) as? [String: Any] else {
+            #expect(Bool(false), "Could not encode dungeon to JSON object")
+            return
+        }
+        // Tamper tilesB64 to invalid length
+        if let s = json["tilesB64"] as? String { json["tilesB64"] = s + "A" }
+        let data = try! JSONSerialization.data(withJSONObject: json, options: [.sortedKeys])
+        var threw = false
+        do { _ = try DungeonJSON.decode(data) } catch { threw = true }
+        #expect(threw, "Expected decode to fail on invalid Base64 length")
+    }
+
+    @Test("decode rejects entrance/exit on non-passable tiles")
+    func entranceExitPassable() {
+        let cfg = DungeonConfig(width: 21, height: 15, algorithm: .bsp(BSPOptions()), ensureConnected: true, placeDoorsAndTags: true)
+        let d = DungeonGrid.generate(config: cfg, seed: 123)
+        guard var json = try? JSONSerialization.jsonObject(with: DungeonJSON.encode(d)) as? [String: Any] else {
+            #expect(Bool(false), "Could not encode dungeon to JSON object")
+            return
+        }
+        // Force entrance to (0,0) which is border wall in our generators
+        json["entrance"] = [0, 0]
+        let data = try! JSONSerialization.data(withJSONObject: json, options: [.sortedKeys])
+        var threw = false
+        do { _ = try DungeonJSON.decode(data) } catch { threw = true }
+        #expect(threw, "Expected decode to fail when entrance is on wall")
+    }
+}
+
+//
+//  DungeonJSONTests.swift
 //  DungeonGrid
 //
 //  Created by Kyle Peterson on 8/23/25.
