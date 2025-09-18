@@ -56,7 +56,7 @@ enum TestDebug {
                 Swift.print(ascii(d))
                 Swift.print("-----------------------")
             }
-            #expect(Bool(false), "\(message())", sourceLocation: SourceLocation(fileID: file, line: line))
+            #expect(Bool(false), "\(message())", sourceLocation: SourceLocation(fileID: String(describing: file), line: Int(line), column: 0))
         }
     }
 }
