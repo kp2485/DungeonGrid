@@ -134,8 +134,8 @@ import Testing
                 count: 5,
                 regionClass: .junctions(minDegree: 3),
                 minDistanceFromEntrance: 4,
+                minSpacing: 3,
                 avoidNearDoorEdgesRadius: 1,
-                minSpacing: 3
             )),
             ("deadEndsNear", PlacementPolicy(
                 count: 6,
@@ -146,9 +146,9 @@ import Testing
             ("coreLargeRooms", PlacementPolicy(
                 count: 4,
                 regionClass: .core,
-                roomAreaMin: 15,
                 minDistanceFromEntrance: 3,
-                minSpacing: 4
+                minSpacing: 4,
+                roomAreaMin: 15,
             ))
         ]
         

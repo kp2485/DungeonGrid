@@ -10,8 +10,8 @@ import Foundation
 
 public struct UniformRoomsOptions: Sendable, Equatable {
     public var attempts: Int = 150
-    public var roomMin: (w: Int, h: Int) = (4, 4)
-    public var roomMax: (w: Int, h: Int) = (10, 8)
+    public var roomMin: (w: Int, h: Int) = (3, 3)
+    public var roomMax: (w: Int, h: Int) = (6, 5)
     public var separation: Int = 1
 
     public init() {}
