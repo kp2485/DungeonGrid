@@ -10,7 +10,18 @@ public struct PlacementPolicy: Sendable, Equatable {
     public var count: Int?
     public var density: Double?
 
-    public enum RegionClass: Sendable, Equatable { case roomsOnly, corridorsOnly, any }
+    public enum RegionClass: Sendable, Equatable {
+        case roomsOnly
+        case corridorsOnly
+        case any
+        // New richer selectors (evaluated via RegionStats/kinds):
+        case junctions(minDegree: Int = 3)
+        case deadEnds
+        case farFromEntrance(minHops: Int)
+        case nearEntrance(maxHops: Int)
+        case perimeter
+        case core
+    }
     public var regionClass: RegionClass = .any
 
     public var excludeDoorTiles: Bool = true

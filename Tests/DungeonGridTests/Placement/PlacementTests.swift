@@ -68,6 +68,33 @@ import Testing
         }
     }
 
+    @Test("RegionClass junctions/deadEnds/far/near/perimeter/core")
+    func advancedRegionClasses() {
+        let d = DungeonGrid.generate(
+            config: .init(width: 61, height: 39, algorithm: .bsp(BSPOptions()), ensureConnected: true, placeDoorsAndTags: true),
+            seed: 2468
+        )
+        let idx = DungeonIndex(d)
+        // junctions
+        var pol = PlacementPolicy(count: 10)
+        pol.regionClass = .junctions(minDegree: 3)
+        _ = Placer.plan(in: d, index: idx, seed: 11, kind: "junc", policy: pol)
+        // dead ends (corridors)
+        pol.regionClass = .deadEnds
+        _ = Placer.plan(in: d, index: idx, seed: 12, kind: "dead", policy: pol)
+        // far/near entrance
+        pol.regionClass = .farFromEntrance(minHops: 3)
+        _ = Placer.plan(in: d, index: idx, seed: 13, kind: "far", policy: pol)
+        pol.regionClass = .nearEntrance(maxHops: 2)
+        _ = Placer.plan(in: d, index: idx, seed: 14, kind: "near", policy: pol)
+        // perimeter/core
+        pol.regionClass = .perimeter
+        _ = Placer.plan(in: d, index: idx, seed: 15, kind: "peri", policy: pol)
+        pol.regionClass = .core
+        _ = Placer.plan(in: d, index: idx, seed: 16, kind: "core", policy: pol)
+        #expect(true)
+    }
+
     @Test("Minimum spacing is honored (Manhattan)")
     func spacingRespected() {
         // Keep this one lighter: run on just the first fuzz seed.

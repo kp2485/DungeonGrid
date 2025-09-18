@@ -34,13 +34,38 @@ public enum Placer {
 
         func regionClassOK(_ rid: RegionID?) -> Bool {
             switch policy.regionClass {
-            case .any: return true
+            case .any:
+                return true
             case .roomsOnly:
                 guard let rid = rid, let kind = kinds[rid] else { return false }
                 if case .room = kind { return true } else { return false }
             case .corridorsOnly:
                 guard let rid = rid, let kind = kinds[rid] else { return false }
                 if case .corridor = kind { return true } else { return false }
+            case .junctions(let minDeg):
+                guard let rid = rid, let ns = nodeStats[rid] else { return false }
+                return ns.degree >= minDeg
+            case .deadEnds:
+                guard let rid = rid, let ns = nodeStats[rid] else { return false }
+                return ns.isDeadEnd
+            case .farFromEntrance(let minHops):
+                guard let rid = rid, let ns = nodeStats[rid] else { return false }
+                let d = ns.distanceFromEntrance ?? Int.max
+                return d >= minHops
+            case .nearEntrance(let maxHops):
+                guard let rid = rid, let ns = nodeStats[rid] else { return false }
+                if let d = ns.distanceFromEntrance { return d <= maxHops } else { return false }
+            case .perimeter:
+                guard let rid = rid, let node = graph.nodes[rid] else { return false }
+                let w = d.grid.width, h = d.grid.height
+                let r = node.bbox
+                return r.x == 0 || r.y == 0 || (r.x + r.width) == w || (r.y + r.height) == h
+            case .core:
+                guard let rid = rid, let node = graph.nodes[rid] else { return false }
+                let w = d.grid.width, h = d.grid.height
+                let r = node.bbox
+                let touchesBorder = r.x == 0 || r.y == 0 || (r.x + r.width) == w || (r.y + r.height) == h
+                return !touchesBorder
             }
         }
         
