@@ -15,20 +15,20 @@ import Testing
         try DungeonJSON.encode(d)
     }
 
-    private func checkEqual(_ a: Dungeon, _ b: Dungeon, file: StaticString = #fileID, line: UInt = #line) {
+    private func checkEqual(_ a: Dungeon, _ b: Dungeon) {
         do {
             let da = try json(a)
             let db = try json(b)
-            #expect(da == db, "Dungeons differ for same seed", sourceLocation: SourceLocation(fileID: file, line: line))
+            #expect(da == db, "Dungeons differ for same seed")
         } catch {
-            #expect(Bool(false), "Encoding failed: \(error)", sourceLocation: SourceLocation(fileID: file, line: line))
+            #expect(Bool(false), "Encoding failed: \(error)")
         }
     }
 
     @Test("BSP generator determinism")
     func bsp() {
         var gen = BSPGenerator(options: BSPOptions())
-        let seed: UInt64 = 0xB5P
+        let seed: UInt64 = 181
         let a = gen.generate(width: 61, height: 39, seed: seed)
         let b = gen.generate(width: 61, height: 39, seed: seed)
         checkEqual(a, b)
@@ -37,7 +37,7 @@ import Testing
     @Test("Maze generator determinism")
     func maze() {
         var gen = MazeGenerator(options: MazeOptions())
-        let seed: UInt64 = 0xMAZ3
+        let seed: UInt64 = 321
         let a = gen.generate(width: 61, height: 39, seed: seed)
         let b = gen.generate(width: 61, height: 39, seed: seed)
         checkEqual(a, b)
@@ -46,7 +46,7 @@ import Testing
     @Test("Caves generator determinism")
     func caves() {
         var gen = CavesGenerator(options: CavesOptions())
-        let seed: UInt64 = 0xCAV35
+        let seed: UInt64 = 835
         let a = gen.generate(width: 61, height: 39, seed: seed)
         let b = gen.generate(width: 61, height: 39, seed: seed)
         checkEqual(a, b)
@@ -55,7 +55,7 @@ import Testing
     @Test("UniformRooms generator determinism")
     func uniformRooms() {
         var gen = UniformRoomsGenerator(options: UniformRoomsOptions())
-        let seed: UInt64 = 0xUR00M5
+        let seed: UInt64 = 7005
         let a = gen.generate(width: 61, height: 39, seed: seed)
         let b = gen.generate(width: 61, height: 39, seed: seed)
         checkEqual(a, b)
