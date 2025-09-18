@@ -47,6 +47,8 @@ public enum ContentPlanner {
         let kinds  = index.kinds
         let w      = index.width
         let h      = index.height
+        let stats  = RegionAnalysis.computeStats(dungeon: d, graph: g)
+        let nodeStats = stats.nodes
 
         // Fast lookup for region theme matches
         @inline(__always)
@@ -97,13 +99,41 @@ public enum ContentPlanner {
 
                     let rid = labels[y * w + x]
                     // Region class check
-                    switch spec.policy.regionClass {
-                    case .any: break
-                    case .roomsOnly:
-                        guard let rid, case .room = kinds[rid] else { continue }
-                    case .corridorsOnly:
-                        guard let rid, case .corridor = kinds[rid] else { continue }
+                    func regionClassOK(_ rid: RegionID?) -> Bool {
+                        switch spec.policy.regionClass {
+                        case .any:
+                            return true
+                        case .roomsOnly:
+                            guard let rid, case .room = kinds[rid] else { return false }
+                            return true
+                        case .corridorsOnly:
+                            guard let rid, case .corridor = kinds[rid] else { return false }
+                            return true
+                        case .junctions(let minDeg):
+                            guard let rid, let ns = nodeStats[rid] else { return false }
+                            return ns.degree >= minDeg
+                        case .deadEnds:
+                            guard let rid, let ns = nodeStats[rid] else { return false }
+                            return ns.isDeadEnd
+                        case .farFromEntrance(let minHops):
+                            guard let rid, let ns = nodeStats[rid] else { return false }
+                            let dh = ns.distanceFromEntrance ?? Int.max
+                            return dh >= minHops
+                        case .nearEntrance(let maxHops):
+                            guard let rid, let ns = nodeStats[rid] else { return false }
+                            if let dh = ns.distanceFromEntrance { return dh <= maxHops } else { return false }
+                        case .perimeter:
+                            guard let rid, let node = g.nodes[rid] else { return false }
+                            let r = node.bbox
+                            return r.x == 0 || r.y == 0 || (r.x + r.width) == w || (r.y + r.height) == h
+                        case .core:
+                            guard let rid, let node = g.nodes[rid] else { return false }
+                            let r = node.bbox
+                            let touches = r.x == 0 || r.y == 0 || (r.x + r.width) == w || (r.y + r.height) == h
+                            return !touches
+                        }
                     }
+                    guard regionClassOK(rid) else { continue }
                     // Theme check
                     if !regionAllowed(rid, for: spec) { continue }
 
