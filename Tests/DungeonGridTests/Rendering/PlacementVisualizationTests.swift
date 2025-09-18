@@ -233,20 +233,32 @@ import Testing
             print("With seed 200: \(closetCount2) closets out of \(d2.rooms.count) total rooms")
             
             if closetCount2 > 0 {
-                let pol = PlacementPolicy(count: 5, regionClass: .closetsOnly)
+                let pol = PlacementPolicy(count: 5, regionClass: .closetsOnly, excludeDoorTiles: false)
                 let placements = Placer.plan(in: d2, seed: 1, kind: "K", policy: pol)
-                let ascii = DungeonDebug.dumpASCII(d2, placements: placements, annotateKinds: true)
-                print("\nCloset rooms (K = key/loot):\n\(ascii)")
+                
+                let asciiWithPlacements = DungeonDebug.dumpASCII(d2, placements: placements, annotateKinds: true)
+                print("\nCloset rooms with placements (K = key/loot):\n\(asciiWithPlacements)")
+                
+                let asciiWithClosets = DungeonDebug.dumpASCII(d2, showClosets: true)
+                print("\nCloset rooms highlighted (C = closet):\n\(asciiWithClosets)")
+                
                 #expect(!placements.isEmpty)
             } else {
                 print("Still no closets - this is expected behavior (closets are optional)")
                 #expect(Bool(true)) // Pass the test since closets are optional
             }
         } else {
-            let pol = PlacementPolicy(count: 5, regionClass: .closetsOnly)
+            let pol = PlacementPolicy(count: 5, regionClass: .closetsOnly, excludeDoorTiles: false)
             let placements = Placer.plan(in: d, seed: 1, kind: "K", policy: pol)
-            let ascii = DungeonDebug.dumpASCII(d, placements: placements, annotateKinds: true)
-            print("\nCloset rooms (K = key/loot):\n\(ascii)")
+            
+            // Show regular view with placements
+            let asciiWithPlacements = DungeonDebug.dumpASCII(d, placements: placements, annotateKinds: true)
+            print("\nCloset rooms with placements (K = key/loot):\n\(asciiWithPlacements)")
+            
+            // Show closets view without placements to see the closet rooms clearly
+            let asciiWithClosets = DungeonDebug.dumpASCII(d, showClosets: true)
+            print("\nCloset rooms highlighted (C = closet):\n\(asciiWithClosets)")
+            
             #expect(!placements.isEmpty)
         }
     }

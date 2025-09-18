@@ -1,4 +1,4 @@
-// swift-tools-version: 5.10
+// swift-tools-version: 6.0
 import PackageDescription
 
 let package = Package(
@@ -7,14 +7,11 @@ let package = Package(
     products: [
         .library(name: "DungeonGrid", targets: ["DungeonGrid"])
     ],
-    dependencies: [
-        .package(url: "https://github.com/apple/swift-testing.git", from: "0.8.0")
-    ],
     targets: [
         .target(name: "DungeonGrid"),
         .testTarget(
             name: "DungeonGridTests",
-            dependencies: ["DungeonGrid", .product(name: "Testing", package: "swift-testing")]
+            dependencies: ["DungeonGrid"]
         )
     ]
 )

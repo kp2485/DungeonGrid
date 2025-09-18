@@ -13,11 +13,12 @@ public enum DungeonDebug {
     /// Render the dungeon as ASCII.
     /// Legend:
     ///  # wall   . floor   + door tile   S entrance   E exit
-    ///  * path   o placement (by kind)
+    ///  * path   o placement (by kind)   C closet room
     public static func dumpASCII(_ d: Dungeon,
                                  placements: [Placement] = [],
                                  path: [Point] = [],
-                                 annotateKinds: Bool = false) -> String {
+                                 annotateKinds: Bool = false,
+                                 showClosets: Bool = false) -> String {
         let w = d.grid.width, h = d.grid.height
 
         // Build a quick lookup for path and placements
@@ -40,6 +41,19 @@ public enum DungeonDebug {
             }
         }
 
+        // Build a quick lookup for closet room locations
+        var isClosetTile = Set<Int>()
+        if showClosets {
+            for room in d.rooms where room.type == .closet {
+                for y in room.minY...room.maxY {
+                    for x in room.minX...room.maxX {
+                        let i = y * w + x
+                        isClosetTile.insert(i)
+                    }
+                }
+            }
+        }
+
         func glyph(x: Int, y: Int) -> String {
             let t = d.grid[x, y]
             let i = y * w + x
@@ -51,9 +65,18 @@ public enum DungeonDebug {
             // Path
             if isOnPath.contains(i) { return "*" }
 
-            // Placements
+            // Placements (but not if showing closets and this is a closet tile)
             if let k = placeByCell[i] {
+                if showClosets && isClosetTile.contains(i) {
+                    // Show closet marker instead of placement when showClosets is enabled
+                    return "C"
+                }
                 return annotateKinds ? String(k.prefix(1)) : "o"
+            }
+
+            // Closets (when showClosets is enabled)
+            if showClosets && isClosetTile.contains(i) {
+                return "C"
             }
 
             // Base terrain

@@ -217,6 +217,7 @@ public enum Placer {
             chosen.append(p)
         }
 
+        
         // Stitch region ids onto placements
         return chosen.map {
             let rid = labels[$0.y * w + $0.x]
