@@ -7,7 +7,7 @@ import Foundation
 import Testing
 @testable import DungeonGrid
 
-@Suite struct DungeonJSONTests {
+@Suite struct DungeonJSONValidationTests {
 
     @Test("encodePretty produces stable, non-empty output")
     func prettyEncode() {
