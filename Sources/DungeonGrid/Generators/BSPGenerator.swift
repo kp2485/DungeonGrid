@@ -248,16 +248,16 @@ struct BSPGenerator {
         // Must be a wall
         guard grid[x, y] == .wall else { return false }
         
-        // Check that all 8 neighbors are walls (ensures it's a true closet)
-        for dy in -1...1 {
-            for dx in -1...1 {
-                let nx = x + dx, ny = y + dy
-                if nx >= 0 && nx < w && ny >= 0 && ny < h {
-                    if grid[nx, ny] != .wall { return false }
-                }
+        // Check that at least 3 of the 4 cardinal neighbors are walls (more reasonable)
+        var wallCount = 0
+        let directions = [(0, -1), (0, 1), (-1, 0), (1, 0)] // up, down, left, right
+        for (dx, dy) in directions {
+            let nx = x + dx, ny = y + dy
+            if nx >= 0 && nx < w && ny >= 0 && ny < h && grid[nx, ny] == .wall {
+                wallCount += 1
             }
         }
         
-        return true
+        return wallCount >= 3
     }
 }
