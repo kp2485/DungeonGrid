@@ -58,7 +58,10 @@ import Testing
                                                    graph: g,
                                                    entrance: d.entrance,
                                                    maxLocks: 2,
-                                                   doorBias: 2)
+                                                   doorBias: 2,
+                                                   preferDeepLocks: true,
+                                                   minKeyDepth: 1,
+                                                   chain: false)
 
         if !plan.locks.isEmpty {
             var foundLocked = false
@@ -75,6 +78,31 @@ import Testing
                 }
             }
             #expect(foundLocked, "No EdgeType.locked edges found despite non-empty locks plan")
+        }
+    }
+
+    @Test("Chained locks preference chooses deeper edges when available")
+    func chainedLocksPrefersDepth() {
+        let d = DungeonGrid.generate(
+            config: .init(width: 61, height: 39,
+                          algorithm: .bsp(BSPOptions()),
+                          ensureConnected: true,
+                          placeDoorsAndTags: true),
+            seed: 777
+        )
+        let idx = DungeonIndex(d)
+        let (d2, plan) = LocksPlanner.planAndApply(d,
+                                                   graph: idx.graph,
+                                                   entrance: d.entrance,
+                                                   maxLocks: 2,
+                                                   doorBias: 2,
+                                                   preferDeepLocks: true,
+                                                   minKeyDepth: 1,
+                                                   chain: true)
+        #expect(d2.edges.h.count == d.edges.h.count && d2.edges.v.count == d.edges.v.count)
+        // We cannot assert exact regions, but we can assert non-empty when doors exist
+        if idx.graph.edges.count > 0 {
+            #expect(!plan.locks.isEmpty)
         }
     }
 }

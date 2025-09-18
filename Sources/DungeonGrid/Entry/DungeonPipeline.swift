@@ -78,14 +78,21 @@ public struct DungeonPipeline {
     }
 
     /// Plan locks across region graph (updates edges) and return plan.
-    public func planLocks(maxLocks: Int = 2, doorBias: Int = 2) -> DungeonPipeline {
+    public func planLocks(maxLocks: Int = 2,
+                          doorBias: Int = 2,
+                          preferDeepLocks: Bool = false,
+                          minKeyDepth: Int = 0,
+                          chain: Bool = false) -> DungeonPipeline {
         addingNamed("planLocks") { res in
             let index = DungeonIndex(res.dungeon)
             let (d2, plan) = LocksPlanner.planAndApply(res.dungeon,
                                                        graph: index.graph,
                                                        entrance: res.dungeon.entrance,
                                                        maxLocks: maxLocks,
-                                                       doorBias: doorBias)
+                                                       doorBias: doorBias,
+                                                       preferDeepLocks: preferDeepLocks,
+                                                       minKeyDepth: minKeyDepth,
+                                                       chain: chain)
             res.dungeon = d2
             res.locksPlan = plan
         }

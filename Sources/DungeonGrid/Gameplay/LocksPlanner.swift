@@ -35,7 +35,10 @@ public enum LocksPlanner {
                                     graph g: RegionGraph,
                                     entrance: Point?,
                                     maxLocks: Int = 2,
-                                    doorBias: Int = 2) -> (dungeon: Dungeon, plan: LocksPlan) {
+                                    doorBias: Int = 2,
+                                    preferDeepLocks: Bool = false,
+                                    minKeyDepth: Int = 0,
+                                    chain: Bool = false) -> (dungeon: Dungeon, plan: LocksPlan) {
 
         let index  = DungeonIndex(d)
         let labels = index.labels
@@ -91,6 +94,21 @@ public enum LocksPlanner {
         var treeEdges: [(RegionID, RegionID)] = []
         for (v, u) in parent { treeEdges.append((u, v)) }
 
+        // Compute depth per region in the tree (root depth = 0)
+        var depth: [RegionID: Int] = [:]
+        depth[startRegion] = 0
+        // BFS over tree to assign depths
+        var q: [RegionID] = [startRegion]
+        var idxQ = 0
+        while idxQ < q.count {
+            let u = q[idxQ]; idxQ += 1
+            let du = depth[u] ?? 0
+            for (v, p) in parent where p == u {
+                depth[v] = du + 1
+                q.append(v)
+            }
+        }
+
         // 4) Pick up to `maxLocks` edges that actually have DOOR boundaries
         func hasDoorBoundary(_ a: RegionID, _ b: RegionID) -> Bool {
             // Scan grid boundaries once; early exit on first door match
@@ -114,9 +132,31 @@ public enum LocksPlanner {
         }
 
         var chosen: [(RegionID, RegionID)] = []
-        for (u, v) in treeEdges {
-            if hasDoorBoundary(u, v) { chosen.append((u, v)) }
-            if chosen.count == maxLocks { break }
+        if chain {
+            // Find deepest leaf by depth, then walk back toward root choosing edges
+            let leaf: RegionID? = depth.max(by: { $0.value < $1.value })?.key
+            if let leaf = leaf {
+                var cur = leaf
+                while let p = parent[cur] {
+                    // Candidate edge p -> cur
+                    if (depth[p] ?? 0) >= minKeyDepth && hasDoorBoundary(p, cur) {
+                        chosen.append((p, cur))
+                        if chosen.count == maxLocks { break }
+                    }
+                    cur = p
+                }
+            }
+        } else {
+            // Non-chained: optionally sort by depth of child (prefer deeper locks)
+            let sorted = preferDeepLocks
+                ? treeEdges.sorted { (a, b) in (depth[a.1] ?? 0) > (depth[b.1] ?? 0) }
+                : treeEdges
+            for (u, v) in sorted {
+                if (depth[u] ?? 0) >= minKeyDepth && hasDoorBoundary(u, v) {
+                    chosen.append((u, v))
+                    if chosen.count == maxLocks { break }
+                }
+            }
         }
 
         if chosen.isEmpty {
